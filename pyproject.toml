@@ -1,0 +1,10 @@
+[project]
+name = "adaptive-chess-ai"
+version = "0.1.0"
+description = "Platforma do analizy skuteczności adaptacyjnych botów szachowych."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
