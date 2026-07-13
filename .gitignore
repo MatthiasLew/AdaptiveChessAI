@@ -100,12 +100,12 @@ logs/
 # =========================
 # Experiments / generated results
 # =========================
-runs/
-results/
-experiments/
-checkpoints/
-models/
-artifacts/
+/runs/
+/results/
+/experiments/
+/checkpoints/
+/models/
+/artifacts/
 
 # Generated data, but keep examples if needed
 data/generated/

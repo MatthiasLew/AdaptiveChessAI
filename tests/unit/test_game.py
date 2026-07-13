@@ -32,6 +32,7 @@ def test_game_can_make_legal_move():
     assert board.piece_at(chess.E4) == chess.Piece(chess.PAWN, chess.WHITE)
     assert board.piece_at(chess.E2) is None
 
+
 def test_game_rejects_illegal_move():
     game = Game()
 
