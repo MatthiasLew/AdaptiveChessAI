@@ -1,6 +1,6 @@
 import chess
 
-from src.adaptive_chess.evaluation.material import calculate_material_balance
+from adaptive_chess.evaluation.material import calculate_material_balance
 
 
 CHECKMATE_SCORE = 10_000

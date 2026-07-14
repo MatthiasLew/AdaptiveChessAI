@@ -1,7 +1,7 @@
 import pytest
 import chess
 
-from src.adaptive_chess.evaluation.material import (
+from adaptive_chess.evaluation.material import (
     calculate_material,
     calculate_material_balance,
 )

@@ -1,7 +1,7 @@
 import pytest
 import chess
 
-from src.adaptive_chess.evaluation.position import (
+from adaptive_chess.evaluation.position import (
     CHECKMATE_SCORE,
     evaluate_position,
 )

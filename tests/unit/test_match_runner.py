@@ -1,9 +1,9 @@
 import chess
 import pytest
 
-from src.adaptive_chess.bots.base_bot import BaseBot
-from src.adaptive_chess.bots.random_bot import RandomBot
-from src.adaptive_chess.experiments.match_runner import MatchRunner
+from adaptive_chess.bots.base_bot import BaseBot
+from adaptive_chess.bots.random_bot import RandomBot
+from adaptive_chess.experiments.match_runner import MatchRunner
 
 
 class ScriptedBot(BaseBot):

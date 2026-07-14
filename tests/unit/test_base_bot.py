@@ -1,7 +1,7 @@
 import pytest
 import chess
 
-from src.adaptive_chess.bots.base_bot import BaseBot
+from adaptive_chess.bots.base_bot import BaseBot
 
 
 class IncompleteBot(BaseBot):

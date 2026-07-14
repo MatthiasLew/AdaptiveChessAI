@@ -1,7 +1,7 @@
 import pytest
 import chess
 
-from src.adaptive_chess.core.game import Game
+from adaptive_chess.core.game import Game
 
 
 def test_game_starts_from_initial_position():

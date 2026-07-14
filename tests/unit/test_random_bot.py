@@ -1,7 +1,7 @@
 import pytest
 import chess
 
-from src.adaptive_chess.bots.random_bot import RandomBot
+from adaptive_chess.bots.random_bot import RandomBot
 
 
 def test_random_bot_has_default_name():
