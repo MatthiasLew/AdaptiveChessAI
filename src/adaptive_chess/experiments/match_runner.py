@@ -5,6 +5,7 @@ import chess
 from adaptive_chess.bots.base_bot import BaseBot
 from adaptive_chess.core.game import Game
 from adaptive_chess.evaluation.material import calculate_material_balance
+from adaptive_chess.evaluation.position import evaluate_position
 
 
 @dataclass(frozen=True)
@@ -21,6 +22,8 @@ class MatchResult:
     result: str
     half_moves: int
     moves_uci: tuple[str, ...]
+    material_balances: tuple[int, ...]
+    position_scores: tuple[float, ...]
     final_material_balance: int
     final_fen: str
     reached_move_limit: bool
@@ -65,7 +68,10 @@ class MatchRunner:
         """
         game = Game(self.initial_fen)
         half_moves = 0
+
         moves_uci: list[str] = []
+        material_balances: list[int] = []
+        position_scores: list[float] = []
 
         while not game.is_game_over() and half_moves < self.max_half_moves:
             current_bot = white_bot if game.get_turn() == chess.WHITE else black_bot
@@ -74,8 +80,17 @@ class MatchRunner:
             move = current_bot.choose_move(board_copy)
 
             game.make_move(move)
-            moves_uci.append(move.uci())
             half_moves += 1
+
+            current_board = game.get_board_copy()
+
+            moves_uci.append(move.uci())
+            material_balances.append(
+                calculate_material_balance(current_board, chess.WHITE)
+            )
+            position_scores.append(
+                evaluate_position(current_board, chess.WHITE)
+            )
 
         reached_move_limit = not game.is_game_over()
 
@@ -92,6 +107,8 @@ class MatchRunner:
             result=result,
             half_moves=half_moves,
             moves_uci=tuple(moves_uci),
+            material_balances=tuple(material_balances),
+            position_scores=tuple(position_scores),
             final_material_balance=final_material_balance,
             final_fen=game.get_fen(),
             reached_move_limit=reached_move_limit,

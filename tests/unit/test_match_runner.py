@@ -4,6 +4,7 @@ import pytest
 from adaptive_chess.bots.base_bot import BaseBot
 from adaptive_chess.bots.random_bot import RandomBot
 from adaptive_chess.experiments.match_runner import MatchRunner
+from adaptive_chess.evaluation.position import CHECKMATE_SCORE
 
 
 class ScriptedBot(BaseBot):
@@ -43,6 +44,10 @@ def test_match_runner_can_play_random_bots_until_move_limit():
     assert all(isinstance(move, str) for move in result.moves_uci)
     assert isinstance(result.final_fen, str)
     assert isinstance(result.final_material_balance, int)
+    assert len(result.material_balances) == result.half_moves
+    assert len(result.position_scores) == result.half_moves
+    assert all(isinstance(balance, int) for balance in result.material_balances)
+    assert all(isinstance(score, float) for score in result.position_scores)
 
 
 def test_match_runner_marks_move_limit_as_reached():
@@ -55,6 +60,8 @@ def test_match_runner_marks_move_limit_as_reached():
     assert result.reached_move_limit is True
     assert result.result == "1/2-1/2"
     assert isinstance(result.final_material_balance, int)
+    assert len(result.material_balances) == 1
+    assert len(result.position_scores) == 1
 
 
 def test_match_runner_can_finish_checkmate_game():
@@ -70,6 +77,22 @@ def test_match_runner_can_finish_checkmate_game():
     assert result.moves_uci == ("f2f3", "e7e5", "g2g4", "d8h4")
     assert result.reached_move_limit is False
     assert result.final_material_balance == 0
+    assert result.material_balances == (0, 0, 0, 0)
+    assert result.position_scores[-1] == -CHECKMATE_SCORE
+
+
+def test_match_runner_tracks_material_balance_after_each_move():
+    white_bot = ScriptedBot("WhiteScriptedBot", ["e2e4", "e4d5"])
+    black_bot = ScriptedBot("BlackScriptedBot", ["d7d5"])
+
+    runner = MatchRunner(max_half_moves=3)
+
+    result = runner.play(white_bot, black_bot)
+
+    assert result.moves_uci == ("e2e4", "d7d5", "e4d5")
+    assert result.material_balances == (0, 0, 1)
+    assert result.position_scores == (0.0, 0.0, 1.0)
+    assert result.final_material_balance == 1
 
 
 def test_match_runner_rejects_invalid_move_limit():
