@@ -42,6 +42,7 @@ def test_match_runner_can_play_random_bots_until_move_limit():
     assert len(result.moves_uci) == result.half_moves
     assert all(isinstance(move, str) for move in result.moves_uci)
     assert isinstance(result.final_fen, str)
+    assert isinstance(result.final_material_balance, int)
 
 
 def test_match_runner_marks_move_limit_as_reached():
@@ -53,6 +54,7 @@ def test_match_runner_marks_move_limit_as_reached():
     assert len(result.moves_uci) == 1
     assert result.reached_move_limit is True
     assert result.result == "1/2-1/2"
+    assert isinstance(result.final_material_balance, int)
 
 
 def test_match_runner_can_finish_checkmate_game():
@@ -67,8 +69,19 @@ def test_match_runner_can_finish_checkmate_game():
     assert result.half_moves == 4
     assert result.moves_uci == ("f2f3", "e7e5", "g2g4", "d8h4")
     assert result.reached_move_limit is False
+    assert result.final_material_balance == 0
 
 
 def test_match_runner_rejects_invalid_move_limit():
     with pytest.raises(ValueError):
         MatchRunner(max_half_moves=0)
+
+
+def test_match_runner_reports_final_material_balance_from_white_perspective():
+    initial_fen = "rnb1kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+    runner = MatchRunner(max_half_moves=1, initial_fen=initial_fen)
+
+    result = runner.play(RandomBot("RandomWhite"), RandomBot("RandomBlack"))
+
+    assert result.final_material_balance == 9

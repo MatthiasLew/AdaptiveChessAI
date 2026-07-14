@@ -4,6 +4,7 @@ import chess
 
 from adaptive_chess.bots.base_bot import BaseBot
 from adaptive_chess.core.game import Game
+from adaptive_chess.evaluation.material import calculate_material_balance
 
 
 @dataclass(frozen=True)
@@ -20,6 +21,7 @@ class MatchResult:
     result: str
     half_moves: int
     moves_uci: tuple[str, ...]
+    final_material_balance: int
     final_fen: str
     reached_move_limit: bool
 
@@ -81,12 +83,16 @@ class MatchRunner:
         if result is None:
             result = "1/2-1/2"
 
+        final_board = game.get_board_copy()
+        final_material_balance = calculate_material_balance(final_board, chess.WHITE)
+
         return MatchResult(
             white_bot_name=white_bot.name,
             black_bot_name=black_bot.name,
             result=result,
             half_moves=half_moves,
             moves_uci=tuple(moves_uci),
+            final_material_balance=final_material_balance,
             final_fen=game.get_fen(),
             reached_move_limit=reached_move_limit,
         )
