@@ -39,6 +39,8 @@ def test_match_runner_can_play_random_bots_until_move_limit():
     assert result.black_bot_name == "RandomBlack"
     assert result.result in {"1-0", "0-1", "1/2-1/2"}
     assert result.half_moves <= 10
+    assert len(result.moves_uci) == result.half_moves
+    assert all(isinstance(move, str) for move in result.moves_uci)
     assert isinstance(result.final_fen, str)
 
 
@@ -48,6 +50,7 @@ def test_match_runner_marks_move_limit_as_reached():
     result = runner.play(RandomBot("RandomWhite"), RandomBot("RandomBlack"))
 
     assert result.half_moves == 1
+    assert len(result.moves_uci) == 1
     assert result.reached_move_limit is True
     assert result.result == "1/2-1/2"
 
@@ -62,6 +65,7 @@ def test_match_runner_can_finish_checkmate_game():
 
     assert result.result == "0-1"
     assert result.half_moves == 4
+    assert result.moves_uci == ("f2f3", "e7e5", "g2g4", "d8h4")
     assert result.reached_move_limit is False
 
 

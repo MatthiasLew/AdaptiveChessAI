@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 import chess
 
-from src.adaptive_chess.bots.base_bot import BaseBot
-from src.adaptive_chess.core.game import Game
+from adaptive_chess.bots.base_bot import BaseBot
+from adaptive_chess.core.game import Game
 
 
 @dataclass(frozen=True)
@@ -19,6 +19,7 @@ class MatchResult:
     black_bot_name: str
     result: str
     half_moves: int
+    moves_uci: tuple[str, ...]
     final_fen: str
     reached_move_limit: bool
 
@@ -62,6 +63,7 @@ class MatchRunner:
         """
         game = Game(self.initial_fen)
         half_moves = 0
+        moves_uci: list[str] = []
 
         while not game.is_game_over() and half_moves < self.max_half_moves:
             current_bot = white_bot if game.get_turn() == chess.WHITE else black_bot
@@ -70,6 +72,7 @@ class MatchRunner:
             move = current_bot.choose_move(board_copy)
 
             game.make_move(move)
+            moves_uci.append(move.uci())
             half_moves += 1
 
         reached_move_limit = not game.is_game_over()
@@ -83,6 +86,7 @@ class MatchRunner:
             black_bot_name=black_bot.name,
             result=result,
             half_moves=half_moves,
+            moves_uci=tuple(moves_uci),
             final_fen=game.get_fen(),
             reached_move_limit=reached_move_limit,
         )
