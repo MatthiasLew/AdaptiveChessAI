@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import Enum
 
 import chess
 
@@ -6,6 +7,21 @@ from adaptive_chess.bots.base_bot import BaseBot
 from adaptive_chess.core.game import Game
 from adaptive_chess.evaluation.material import calculate_material_balance
 from adaptive_chess.evaluation.position import evaluate_position
+
+
+class TerminationReason(Enum):
+    """
+    Powód zakończenia partii.
+
+    RULES oznacza, że partia zakończyła się zgodnie z zasadami szachów,
+    np. matem, patem albo remisem wykrytym przez python-chess.
+
+    MOVE_LIMIT oznacza, że partia została zatrzymana przez sztuczny limit
+    półruchów ustawiony w MatchRunner.
+    """
+
+    RULES = "rules"
+    MOVE_LIMIT = "move_limit"
 
 
 @dataclass(frozen=True)
@@ -20,6 +36,7 @@ class MatchResult:
     white_bot_name: str
     black_bot_name: str
     result: str
+    termination_reason: TerminationReason
     half_moves: int
     moves_uci: tuple[str, ...]
     material_balances: tuple[int, ...]
@@ -94,9 +111,14 @@ class MatchRunner:
 
         reached_move_limit = not game.is_game_over()
 
-        result = game.get_result()
-        if result is None:
+        if reached_move_limit:
+            termination_reason = TerminationReason.MOVE_LIMIT
             result = "1/2-1/2"
+        else:
+            termination_reason = TerminationReason.RULES
+            result = game.get_result()
+            if result is None:
+                result = "1/2-1/2"
 
         final_board = game.get_board_copy()
         final_material_balance = calculate_material_balance(final_board, chess.WHITE)
@@ -105,6 +127,7 @@ class MatchRunner:
             white_bot_name=white_bot.name,
             black_bot_name=black_bot.name,
             result=result,
+            termination_reason=termination_reason,
             half_moves=half_moves,
             moves_uci=tuple(moves_uci),
             material_balances=tuple(material_balances),

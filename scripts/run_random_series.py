@@ -1,13 +1,11 @@
 from pathlib import Path
 import sys
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_PATH = PROJECT_ROOT / "src"
 
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
-
 
 from adaptive_chess.analysis.statistics import summarize_matches
 from adaptive_chess.bots.random_bot import RandomBot
@@ -38,7 +36,7 @@ def main() -> None:
     print(f"Liczba partii: {summary.total_matches}")
     print(f"Limit półruchów na partię: {max_half_moves}")
     print()
-    print("Wyniki:")
+    print("Wyniki formalne:")
     print(f"Wygrane białych: {summary.white_wins}")
     print(f"Wygrane czarnych: {summary.black_wins}")
     print(f"Remisy: {summary.draws}")
@@ -57,7 +55,8 @@ def main() -> None:
             f"{index:02d}. wynik={result.result}, "
             f"półruchy={result.half_moves}, "
             f"materiał={result.final_material_balance}, "
-            f"limit={result.reached_move_limit}"
+            f"limit={result.reached_move_limit}, "
+            f"zakończenie={result.termination_reason.value}"
         )
 
 

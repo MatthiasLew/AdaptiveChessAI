@@ -7,7 +7,7 @@ from adaptive_chess.analysis.statistics import (
     count_move_limit_reached,
     summarize_matches,
 )
-from adaptive_chess.experiments.match_runner import MatchResult
+from adaptive_chess.experiments.match_runner import MatchResult, TerminationReason
 
 
 def create_match_result(
@@ -20,6 +20,11 @@ def create_match_result(
         white_bot_name="WhiteBot",
         black_bot_name="BlackBot",
         result=result,
+        termination_reason=(
+            TerminationReason.MOVE_LIMIT
+            if reached_move_limit
+            else TerminationReason.RULES
+        ),
         half_moves=half_moves,
         moves_uci=tuple("a2a3" for _ in range(half_moves)),
         material_balances=tuple(0 for _ in range(half_moves)),

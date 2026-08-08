@@ -3,7 +3,10 @@ import pytest
 
 from adaptive_chess.bots.base_bot import BaseBot
 from adaptive_chess.bots.random_bot import RandomBot
-from adaptive_chess.experiments.match_runner import MatchRunner
+from adaptive_chess.experiments.match_runner import (
+    MatchRunner,
+    TerminationReason,
+)
 from adaptive_chess.evaluation.position import CHECKMATE_SCORE
 
 
@@ -48,7 +51,10 @@ def test_match_runner_can_play_random_bots_until_move_limit():
     assert len(result.position_scores) == result.half_moves
     assert all(isinstance(balance, int) for balance in result.material_balances)
     assert all(isinstance(score, float) for score in result.position_scores)
-
+    assert result.termination_reason in {
+        TerminationReason.RULES,
+        TerminationReason.MOVE_LIMIT,
+    }
 
 def test_match_runner_marks_move_limit_as_reached():
     runner = MatchRunner(max_half_moves=1)
@@ -62,6 +68,7 @@ def test_match_runner_marks_move_limit_as_reached():
     assert isinstance(result.final_material_balance, int)
     assert len(result.material_balances) == 1
     assert len(result.position_scores) == 1
+    assert result.termination_reason == TerminationReason.MOVE_LIMIT
 
 
 def test_match_runner_can_finish_checkmate_game():
@@ -79,6 +86,7 @@ def test_match_runner_can_finish_checkmate_game():
     assert result.final_material_balance == 0
     assert result.material_balances == (0, 0, 0, 0)
     assert result.position_scores[-1] == -CHECKMATE_SCORE
+    assert result.termination_reason == TerminationReason.RULES
 
 
 def test_match_runner_tracks_material_balance_after_each_move():
