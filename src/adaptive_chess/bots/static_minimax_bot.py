@@ -1,12 +1,12 @@
 import chess
 
 from adaptive_chess.bots.base_bot import BaseBot
-from adaptive_chess.search.minimax import find_best_move
+from adaptive_chess.search.minimax import find_best_move_alpha_beta
 
 
 class StaticMinimaxBot(BaseBot):
     """
-    Klasyczny bot szachowy oparty na algorytmie minimax.
+    Klasyczny bot szachowy oparty na algorytmie minimax z alfa-beta pruning.
 
     Bot analizuje możliwe ruchy do określonej głębokości i wybiera ruch,
     który prowadzi do najlepszej oceny pozycji z perspektywy strony,
@@ -40,7 +40,7 @@ class StaticMinimaxBot(BaseBot):
             board: Aktualna plansza.
 
         Returns:
-            Najlepszy znaleziony ruch według minimaxa.
+            Najlepszy znaleziony ruch według minimaxa z alfa-beta pruning.
 
         Raises:
             ValueError: Jeśli nie ma legalnych ruchów.
@@ -48,7 +48,7 @@ class StaticMinimaxBot(BaseBot):
         board_copy = board.copy()
         perspective = board_copy.turn
 
-        return find_best_move(
+        return find_best_move_alpha_beta(
             board=board_copy,
             depth=self.depth,
             perspective=perspective,
