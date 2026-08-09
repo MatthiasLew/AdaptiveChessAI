@@ -243,3 +243,12 @@ Aplikacyjne MVP będzie można uznać za gotowe dopiero wtedy, gdy użytkownik b
 - zobaczyć wynik lub status gry.
 
 Do tego momentu projekt nie powinien być opisywany jako domknięta aplikacja.
+
+## Status realizacji przed GUI
+
+| Etap | Status |
+|---|---|
+| HumanVsBotSession | wykonane |
+| terminalowy smoke test | wykonane |
+| dokumentacja trybu człowiek vs bot | wykonane |
+| GUI | następny etap |

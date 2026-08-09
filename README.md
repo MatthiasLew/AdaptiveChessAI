@@ -153,3 +153,19 @@ Projekt ma gotowy mechaniczny fundament badawczy.
 Projekt nie ma jeszcze kompletnego MVP aplikacyjnego.
 Następna faza to GUI i tryb człowiek vs bot.
 ```
+
+## Tryb człowiek vs bot bez GUI
+
+Projekt posiada już warstwę sesji człowiek vs bot, ale nadal nie posiada GUI.
+
+Terminalowy smoke test:
+
+```powershell
+python scripts/play_human_vs_bot_terminal.py --bot random --human-color white
+```
+
+Dokumentacja:
+
+```text
+docs/human_vs_bot.md
+```
