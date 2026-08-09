@@ -56,6 +56,7 @@ def test_match_runner_can_play_random_bots_until_move_limit():
         TerminationReason.MOVE_LIMIT,
     }
 
+
 def test_match_runner_marks_move_limit_as_reached():
     runner = MatchRunner(max_half_moves=1)
 
@@ -80,6 +81,8 @@ def test_match_runner_can_finish_checkmate_game():
     result = runner.play(white_bot, black_bot)
 
     assert result.result == "0-1"
+    assert result.adjudicated_result == "0-1"
+    assert result.termination_reason == TerminationReason.RULES
     assert result.half_moves == 4
     assert result.moves_uci == ("f2f3", "e7e5", "g2g4", "d8h4")
     assert result.reached_move_limit is False
@@ -116,3 +119,25 @@ def test_match_runner_reports_final_material_balance_from_white_perspective():
     result = runner.play(RandomBot("RandomWhite"), RandomBot("RandomBlack"))
 
     assert result.final_material_balance == 9
+
+
+def test_match_runner_adjudicates_move_limit_by_material_balance():
+    initial_fen = "rnb1kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+    runner = MatchRunner(
+        max_half_moves=1,
+        initial_fen=initial_fen,
+        adjudication_material_threshold=3,
+    )
+
+    result = runner.play(RandomBot("RandomWhite"), RandomBot("RandomBlack"))
+
+    assert result.result == "1/2-1/2"
+    assert result.adjudicated_result == "1-0"
+    assert result.termination_reason == TerminationReason.MOVE_LIMIT
+    assert result.final_material_balance == 9
+
+
+def test_match_runner_rejects_invalid_adjudication_threshold():
+    with pytest.raises(ValueError):
+        MatchRunner(max_half_moves=1, adjudication_material_threshold=0)

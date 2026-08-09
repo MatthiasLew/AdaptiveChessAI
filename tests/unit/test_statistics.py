@@ -32,6 +32,7 @@ def create_match_result(
         final_material_balance=final_material_balance,
         final_fen="dummy-fen",
         reached_move_limit=reached_move_limit,
+        adjudicated_result=result,
     )
 
 

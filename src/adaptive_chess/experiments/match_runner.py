@@ -3,6 +3,7 @@ from enum import Enum
 
 import chess
 
+from adaptive_chess.experiments.adjudication import adjudicate_result_by_material
 from adaptive_chess.bots.base_bot import BaseBot
 from adaptive_chess.core.game import Game
 from adaptive_chess.evaluation.material import calculate_material_balance
@@ -36,6 +37,7 @@ class MatchResult:
     white_bot_name: str
     black_bot_name: str
     result: str
+    adjudicated_result: str
     termination_reason: TerminationReason
     half_moves: int
     moves_uci: tuple[str, ...]
@@ -54,7 +56,7 @@ class MatchRunner:
     Do obsługi planszy używa klasy Game, a do wyboru ruchów używa botów.
     """
 
-    def __init__(self, max_half_moves: int = 200, initial_fen: str | None = None) -> None:
+    def __init__(self, max_half_moves: int = 200, initial_fen: str | None = None, adjudication_material_threshold: int = 3,) -> None:
         """
         Tworzy runner do rozgrywania partii.
 
@@ -68,9 +70,11 @@ class MatchRunner:
         """
         if max_half_moves < 1:
             raise ValueError("max_half_moves must be at least 1.")
-
+        if adjudication_material_threshold < 1:
+            raise ValueError("adjudication_material_threshold must be at least 1.")
         self.max_half_moves = max_half_moves
         self.initial_fen = initial_fen
+        self.adjudication_material_threshold = adjudication_material_threshold
 
     def play(self, white_bot: BaseBot, black_bot: BaseBot) -> MatchResult:
         """
@@ -111,18 +115,23 @@ class MatchRunner:
 
         reached_move_limit = not game.is_game_over()
 
+        final_board = game.get_board_copy()
+        final_material_balance = calculate_material_balance(final_board, chess.WHITE)
+
         if reached_move_limit:
             termination_reason = TerminationReason.MOVE_LIMIT
             result = "1/2-1/2"
+            adjudicated_result = adjudicate_result_by_material(
+                final_material_balance=final_material_balance,
+                material_threshold=self.adjudication_material_threshold,
+            )
         else:
             termination_reason = TerminationReason.RULES
             result = game.get_result()
             if result is None:
                 result = "1/2-1/2"
 
-        final_board = game.get_board_copy()
-        final_material_balance = calculate_material_balance(final_board, chess.WHITE)
-
+            adjudicated_result = result
         return MatchResult(
             white_bot_name=white_bot.name,
             black_bot_name=black_bot.name,
@@ -135,4 +144,5 @@ class MatchRunner:
             final_material_balance=final_material_balance,
             final_fen=game.get_fen(),
             reached_move_limit=reached_move_limit,
+            adjudicated_result=adjudicated_result,
         )

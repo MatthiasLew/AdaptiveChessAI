@@ -112,6 +112,7 @@ def print_series_summary(title: str, results: tuple[MatchResult, ...]) -> None:
     for index, result in enumerate(results, start=1):
         print(
             f"{index:02d}. wynik={result.result}, "
+            f"wynik_tech={result.adjudicated_result}, "
             f"półruchy={result.half_moves}, "
             f"materiał={result.final_material_balance}, "
             f"zakończenie={result.termination_reason.value}"

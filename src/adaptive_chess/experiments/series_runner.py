@@ -18,6 +18,7 @@ class SeriesRunner:
         matches_count: int,
         max_half_moves: int = 200,
         initial_fen: str | None = None,
+        adjudication_material_threshold: int = 3
     ) -> None:
         """
         Tworzy runner serii partii.
@@ -37,10 +38,12 @@ class SeriesRunner:
         if max_half_moves < 1:
             raise ValueError("max_half_moves must be at least 1.")
 
+        if adjudication_material_threshold < 1:
+            raise ValueError("adjudication_material_threshold must be at least 1.")
         self.matches_count = matches_count
         self.max_half_moves = max_half_moves
         self.initial_fen = initial_fen
-
+        self.adjudication_material_threshold = adjudication_material_threshold
     def play_series(
         self,
         white_bot_factory: Callable[[], BaseBot],
@@ -65,6 +68,7 @@ class SeriesRunner:
             match_runner = MatchRunner(
                 max_half_moves=self.max_half_moves,
                 initial_fen=self.initial_fen,
+                adjudication_material_threshold=self.adjudication_material_threshold,
             )
 
             result = match_runner.play(white_bot, black_bot)

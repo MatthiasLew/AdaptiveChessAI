@@ -53,6 +53,7 @@ def main() -> None:
     for index, result in enumerate(results, start=1):
         print(
             f"{index:02d}. wynik={result.result}, "
+            f"wynik_tech={result.adjudicated_result}, "
             f"półruchy={result.half_moves}, "
             f"materiał={result.final_material_balance}, "
             f"limit={result.reached_move_limit}, "
