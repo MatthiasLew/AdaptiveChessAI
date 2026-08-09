@@ -169,3 +169,20 @@ Dokumentacja:
 ```text
 docs/human_vs_bot.md
 ```
+
+## Koncepcja GUI
+
+Zatwierdzona koncepcja GUI znajduje się w:
+
+```text
+docs/gui_concept.md
+```
+
+Aplikacja ma być wieloekranowa:
+
+- menu główne,
+- gra z botem,
+- podsumowanie partii,
+- eksperymenty,
+- log eksperymentu,
+- wyniki i raporty.

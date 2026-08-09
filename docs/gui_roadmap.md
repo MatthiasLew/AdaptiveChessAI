@@ -3,6 +3,22 @@
 Ten dokument opisuje plan przejścia od backendu badawczego do właściwej aplikacji z GUI.
 
 ---
+## Zatwierdzona koncepcja
+
+Szczegółowy opis zatwierdzonego układu GUI znajduje się w:
+
+```text
+docs/gui_concept.md
+```
+
+Aplikacja ma być wieloekranowa i zawierać:
+
+- menu główne,
+- ekran gry z botem,
+- ekran podsumowania partii,
+- ekran eksperymentów,
+- ekran logu eksperymentu,
+- ekran wyników.
 
 ## Cel fazy GUI
 
