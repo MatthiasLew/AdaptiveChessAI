@@ -1,5 +1,7 @@
+import argparse
 from pathlib import Path
 import sys
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_PATH = PROJECT_ROOT / "src"
@@ -7,9 +9,40 @@ SRC_PATH = PROJECT_ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
+
 from adaptive_chess.analysis.statistics import summarize_matches
 from adaptive_chess.bots.random_bot import RandomBot
+from adaptive_chess.data.csv_exporter import export_match_results_to_csv
 from adaptive_chess.experiments.series_runner import SeriesRunner
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Run a RandomBot vs RandomBot match series."
+    )
+
+    parser.add_argument(
+        "--matches",
+        type=int,
+        default=20,
+        help="Number of matches to run.",
+    )
+
+    parser.add_argument(
+        "--max-half-moves",
+        type=int,
+        default=100,
+        help="Maximum number of half-moves per match.",
+    )
+
+    parser.add_argument(
+        "--output-csv",
+        type=str,
+        default=None,
+        help="Optional path for exporting match results to CSV.",
+    )
+
+    return parser.parse_args()
 
 
 def main() -> None:
@@ -17,12 +50,11 @@ def main() -> None:
     Uruchamia serię partii RandomBot vs RandomBot
     i wypisuje podstawowe statystyki.
     """
-    matches_count = 20
-    max_half_moves = 100
+    args = parse_args()
 
     runner = SeriesRunner(
-        matches_count=matches_count,
-        max_half_moves=max_half_moves,
+        matches_count=args.matches,
+        max_half_moves=args.max_half_moves,
     )
 
     results = runner.play_series(
@@ -34,7 +66,7 @@ def main() -> None:
 
     print("=== RandomBot vs RandomBot — seria partii ===")
     print(f"Liczba partii: {summary.total_matches}")
-    print(f"Limit półruchów na partię: {max_half_moves}")
+    print(f"Limit półruchów na partię: {args.max_half_moves}")
     print()
     print("Wyniki formalne:")
     print(f"Wygrane białych: {summary.white_wins}")
@@ -64,6 +96,15 @@ def main() -> None:
             f"limit={result.reached_move_limit}, "
             f"zakończenie={result.termination_reason.value}"
         )
+
+    if args.output_csv is not None:
+        saved_path = export_match_results_to_csv(
+            matches=results,
+            output_path=args.output_csv,
+            experiment_name="RandomBot-White vs RandomBot-Black",
+        )
+        print()
+        print(f"Zapisano CSV: {saved_path}")
 
 
 if __name__ == "__main__":

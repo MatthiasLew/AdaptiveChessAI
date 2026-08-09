@@ -13,6 +13,7 @@ if str(SRC_PATH) not in sys.path:
 from adaptive_chess.analysis.statistics import summarize_matches
 from adaptive_chess.bots.random_bot import RandomBot
 from adaptive_chess.bots.static_minimax_bot import StaticMinimaxBot
+from adaptive_chess.data.csv_exporter import export_match_series_collection_to_csv
 from adaptive_chess.experiments.match_runner import MatchResult
 from adaptive_chess.experiments.series_runner import SeriesRunner
 
@@ -48,6 +49,13 @@ def parse_args() -> argparse.Namespace:
         nargs="+",
         default=[1],
         help="Minimax depths to test, for example: --depths 1 2",
+    )
+
+    parser.add_argument(
+        "--output-csv",
+        type=str,
+        default=None,
+        help="Optional path for exporting match results to CSV.",
     )
 
     return parser.parse_args()
@@ -95,16 +103,19 @@ def print_series_summary(title: str, results: tuple[MatchResult, ...]) -> None:
     print(f"=== {title} ===")
     print(f"Liczba partii: {summary.total_matches}")
     print()
+
     print("Wyniki formalne:")
     print(f"Wygrane białych: {summary.white_wins}")
     print(f"Wygrane czarnych: {summary.black_wins}")
     print(f"Remisy: {summary.draws}")
     print()
+
     print("Wyniki techniczne:")
     print(f"Wygrane białych: {summary.adjudicated_white_wins}")
     print(f"Wygrane czarnych: {summary.adjudicated_black_wins}")
     print(f"Remisy: {summary.adjudicated_draws}")
     print()
+
     print("Statystyki:")
     print(f"Średnia liczba półruchów: {summary.average_half_moves:.2f}")
     print(
@@ -113,6 +124,7 @@ def print_series_summary(title: str, results: tuple[MatchResult, ...]) -> None:
     )
     print(f"Partie zakończone limitem: {summary.move_limit_reached_count}")
     print()
+
     print("Szczegóły partii:")
     for index, result in enumerate(results, start=1):
         print(
@@ -130,7 +142,7 @@ def run_comparison_for_depth(
     matches_count: int,
     max_half_moves: int,
     minimax_depth: int,
-) -> None:
+) -> list[tuple[str, tuple[MatchResult, ...]]]:
     """
     Uruchamia porównanie RandomBot vs StaticMinimaxBot dla jednej głębokości minimaxa.
 
@@ -138,7 +150,17 @@ def run_comparison_for_depth(
         matches_count: Liczba partii w każdej konfiguracji kolorów.
         max_half_moves: Limit półruchów na partię.
         minimax_depth: Głębokość minimaxa.
+
+    Returns:
+        Lista serii wyników gotowa do opcjonalnego eksportu CSV.
     """
+    random_vs_minimax_name = (
+        f"RandomBot-White vs StaticMinimaxBot-Black-depth-{minimax_depth}"
+    )
+    minimax_vs_random_name = (
+        f"StaticMinimaxBot-White-depth-{minimax_depth} vs RandomBot-Black"
+    )
+
     random_white_vs_minimax_black = SeriesRunner(
         matches_count=matches_count,
         max_half_moves=max_half_moves,
@@ -165,14 +187,19 @@ def run_comparison_for_depth(
     print()
 
     print_series_summary(
-        f"RandomBot-White vs StaticMinimaxBot-Black-depth-{minimax_depth}",
+        random_vs_minimax_name,
         random_white_vs_minimax_black,
     )
 
     print_series_summary(
-        f"StaticMinimaxBot-White-depth-{minimax_depth} vs RandomBot-Black",
+        minimax_vs_random_name,
         minimax_white_vs_random_black,
     )
+
+    return [
+        (random_vs_minimax_name, random_white_vs_minimax_black),
+        (minimax_vs_random_name, minimax_white_vs_random_black),
+    ]
 
 
 def main() -> None:
@@ -193,12 +220,22 @@ def main() -> None:
     print(f"Testowane głębokości minimaxa: {args.depths}")
     print()
 
+    all_series: list[tuple[str, tuple[MatchResult, ...]]] = []
+
     for depth in args.depths:
-        run_comparison_for_depth(
+        depth_series = run_comparison_for_depth(
             matches_count=args.matches,
             max_half_moves=args.max_half_moves,
             minimax_depth=depth,
         )
+        all_series.extend(depth_series)
+
+    if args.output_csv is not None:
+        saved_path = export_match_series_collection_to_csv(
+            series_collection=all_series,
+            output_path=args.output_csv,
+        )
+        print(f"Zapisano CSV: {saved_path}")
 
 
 if __name__ == "__main__":
