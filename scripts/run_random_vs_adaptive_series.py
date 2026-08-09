@@ -2,11 +2,14 @@ import argparse
 from pathlib import Path
 import sys
 
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_PATH = PROJECT_ROOT / "src"
 
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
+
+
 from adaptive_chess.adaptation.opponent_profile import OpponentMoveProfile
 from adaptive_chess.analysis.statistics import summarize_matches
 from adaptive_chess.bots.adaptive_minimax_bot import (
@@ -82,10 +85,10 @@ def parse_args() -> argparse.Namespace:
 
 
 def validate_experiment_config(
-        matches_count: int,
-        max_half_moves: int,
-        depths: list[int],
-        adjudication_material_threshold: int = 3,
+    matches_count: int,
+    max_half_moves: int,
+    depths: list[int],
+    adjudication_material_threshold: int = 3,
 ) -> None:
     """
     Sprawdza poprawność konfiguracji eksperymentu.
@@ -164,11 +167,14 @@ def print_series_summary(title: str, results: tuple[MatchResult, ...]) -> None:
 
 
 def run_comparison_for_depth(
-        matches_count: int,
-        max_half_moves: int,
-        adaptive_depth: int,
-        adjudication_material_threshold: int,
-) -> list[tuple[str, tuple[MatchResult, ...]]]:
+    matches_count: int,
+    max_half_moves: int,
+    adaptive_depth: int,
+    adjudication_material_threshold: int,
+) -> tuple[
+    list[tuple[str, tuple[MatchResult, ...]]],
+    list[dict[str, object]],
+]:
     """
     Uruchamia porównanie RandomBot vs AdaptiveMinimaxBot dla jednej głębokości.
 
@@ -179,7 +185,7 @@ def run_comparison_for_depth(
         adjudication_material_threshold: Próg materiałowy adjudykacji.
 
     Returns:
-        Lista serii wyników gotowa do opcjonalnego eksportu CSV.
+        Wyniki serii oraz końcowe migawki profili przeciwnika.
     """
     random_vs_adaptive_name = (
         f"RandomBot-White vs AdaptiveMinimaxBot-Black-depth-{adaptive_depth}"
@@ -187,6 +193,7 @@ def run_comparison_for_depth(
     adaptive_vs_random_name = (
         f"AdaptiveMinimaxBot-White-depth-{adaptive_depth} vs RandomBot-Black"
     )
+
     random_vs_adaptive_profile = OpponentMoveProfile()
     adaptive_vs_random_profile = OpponentMoveProfile()
 
@@ -228,21 +235,47 @@ def run_comparison_for_depth(
         adaptive_vs_random_name,
         adaptive_white_vs_random_black,
     )
+
+    random_vs_adaptive_profile_data = random_vs_adaptive_profile.to_dict()
+    adaptive_vs_random_profile_data = adaptive_vs_random_profile.to_dict()
+
     print("Profil przeciwnika — Adaptive jako czarne:")
-    print(random_vs_adaptive_profile.to_dict())
+    print(random_vs_adaptive_profile_data)
     print()
 
     print("Profil przeciwnika — Adaptive jako białe:")
-    print(adaptive_vs_random_profile.to_dict())
+    print(adaptive_vs_random_profile_data)
     print()
 
-    return [
+    series_results = [
         (random_vs_adaptive_name, random_white_vs_adaptive_black),
         (adaptive_vs_random_name, adaptive_white_vs_random_black),
     ]
 
+    profile_snapshots: list[dict[str, object]] = [
+        {
+            "series_name": random_vs_adaptive_name,
+            "adaptive_bot_color": "black",
+            "opponent_bot": "RandomBot",
+            "adaptive_depth": adaptive_depth,
+            "profile": random_vs_adaptive_profile_data,
+        },
+        {
+            "series_name": adaptive_vs_random_name,
+            "adaptive_bot_color": "white",
+            "opponent_bot": "RandomBot",
+            "adaptive_depth": adaptive_depth,
+            "profile": adaptive_vs_random_profile_data,
+        },
+    ]
 
-def build_experiment_metadata(args: argparse.Namespace) -> dict[str, object]:
+    return series_results, profile_snapshots
+
+
+def build_experiment_metadata(
+    args: argparse.Namespace,
+    adaptive_profile_snapshots: list[dict[str, object]] | None = None,
+) -> dict[str, object]:
     """
     Buduje słownik metadanych opisujących konfigurację eksperymentu.
     """
@@ -279,12 +312,16 @@ def build_experiment_metadata(args: argparse.Namespace) -> dict[str, object]:
         "position_evaluation_version": POSITION_EVALUATION_VERSION,
         "adaptive_bot_version": ADAPTIVE_BOT_VERSION,
         "adaptive_profile_scope": "series_persistent",
+        "adaptive_profile_snapshots": adaptive_profile_snapshots or [],
         "series": series,
         "output_csv": args.output_csv,
     }
 
 
-def maybe_write_metadata(args: argparse.Namespace) -> None:
+def maybe_write_metadata(
+    args: argparse.Namespace,
+    adaptive_profile_snapshots: list[dict[str, object]],
+) -> None:
     """
     Zapisuje metadane, jeśli użytkownik podał output CSV albo output metadata.
     """
@@ -297,7 +334,10 @@ def maybe_write_metadata(args: argparse.Namespace) -> None:
     )
 
     saved_path = write_experiment_metadata(
-        metadata=build_experiment_metadata(args),
+        metadata=build_experiment_metadata(
+            args=args,
+            adaptive_profile_snapshots=adaptive_profile_snapshots,
+        ),
         output_path=metadata_path,
     )
 
@@ -327,15 +367,17 @@ def main() -> None:
     print()
 
     all_series: list[tuple[str, tuple[MatchResult, ...]]] = []
+    all_profile_snapshots: list[dict[str, object]] = []
 
     for depth in args.depths:
-        depth_series = run_comparison_for_depth(
+        depth_series, depth_profile_snapshots = run_comparison_for_depth(
             matches_count=args.matches,
             max_half_moves=args.max_half_moves,
             adaptive_depth=depth,
             adjudication_material_threshold=args.adjudication_material_threshold,
         )
         all_series.extend(depth_series)
+        all_profile_snapshots.extend(depth_profile_snapshots)
 
     if args.output_csv is not None:
         saved_path = export_match_series_collection_to_csv(
@@ -344,7 +386,10 @@ def main() -> None:
         )
         print(f"Zapisano CSV: {saved_path}")
 
-    maybe_write_metadata(args)
+    maybe_write_metadata(
+        args=args,
+        adaptive_profile_snapshots=all_profile_snapshots,
+    )
 
 
 if __name__ == "__main__":
