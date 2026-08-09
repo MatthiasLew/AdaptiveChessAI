@@ -52,3 +52,17 @@ Dokument zawiera:
 - ograniczenia aktualnej wersji,
 - plan domknięcia MVP,
 - proponowany zestaw eksperymentów do pracy inżynierskiej.
+
+## Finalne uruchomienie eksperymentów
+
+Checklista finalnego uruchomienia eksperymentów znajduje się w:
+
+```text
+docs/final_experiment_checklist.md
+```
+
+Szablon opisu wyników do pracy inżynierskiej znajduje się w:
+
+```text
+docs/results_writeup_template.md
+```
