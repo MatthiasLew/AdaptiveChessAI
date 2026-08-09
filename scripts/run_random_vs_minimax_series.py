@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 import sys
 
@@ -14,6 +15,71 @@ from adaptive_chess.bots.random_bot import RandomBot
 from adaptive_chess.bots.static_minimax_bot import StaticMinimaxBot
 from adaptive_chess.experiments.match_runner import MatchResult
 from adaptive_chess.experiments.series_runner import SeriesRunner
+
+
+def parse_args() -> argparse.Namespace:
+    """
+    Parsuje argumenty przekazane z terminala.
+
+    Returns:
+        Obiekt z konfiguracją eksperymentu.
+    """
+    parser = argparse.ArgumentParser(
+        description="Run RandomBot vs StaticMinimaxBot comparison series."
+    )
+
+    parser.add_argument(
+        "--matches",
+        type=int,
+        default=20,
+        help="Number of matches per color configuration.",
+    )
+
+    parser.add_argument(
+        "--max-half-moves",
+        type=int,
+        default=100,
+        help="Maximum number of half-moves per match.",
+    )
+
+    parser.add_argument(
+        "--depths",
+        type=int,
+        nargs="+",
+        default=[1],
+        help="Minimax depths to test, for example: --depths 1 2",
+    )
+
+    return parser.parse_args()
+
+
+def validate_experiment_config(
+    matches_count: int,
+    max_half_moves: int,
+    depths: list[int],
+) -> None:
+    """
+    Sprawdza poprawność konfiguracji eksperymentu.
+
+    Args:
+        matches_count: Liczba partii na konfigurację.
+        max_half_moves: Limit półruchów.
+        depths: Lista głębokości minimaxa.
+
+    Raises:
+        ValueError: Jeśli konfiguracja jest niepoprawna.
+    """
+    if matches_count < 1:
+        raise ValueError("--matches must be at least 1.")
+
+    if max_half_moves < 1:
+        raise ValueError("--max-half-moves must be at least 1.")
+
+    if not depths:
+        raise ValueError("--depths must contain at least one value.")
+
+    if any(depth < 1 for depth in depths):
+        raise ValueError("Every minimax depth must be at least 1.")
 
 
 def print_series_summary(title: str, results: tuple[MatchResult, ...]) -> None:
@@ -54,24 +120,26 @@ def print_series_summary(title: str, results: tuple[MatchResult, ...]) -> None:
     print()
 
 
-def main() -> None:
+def run_comparison_for_depth(
+    matches_count: int,
+    max_half_moves: int,
+    minimax_depth: int,
+) -> None:
     """
-    Uruchamia dwie serie porównawcze:
+    Uruchamia porównanie RandomBot vs StaticMinimaxBot dla jednej głębokości minimaxa.
 
-    1. RandomBot jako białe vs StaticMinimaxBot jako czarne.
-    2. StaticMinimaxBot jako białe vs RandomBot jako czarne.
+    Args:
+        matches_count: Liczba partii w każdej konfiguracji kolorów.
+        max_half_moves: Limit półruchów na partię.
+        minimax_depth: Głębokość minimaxa.
     """
-    matches_count = 20
-    max_half_moves = 100
-    minimax_depth = 1
-
     random_white_vs_minimax_black = SeriesRunner(
         matches_count=matches_count,
         max_half_moves=max_half_moves,
     ).play_series(
         white_bot_factory=lambda: RandomBot("RandomBot-White"),
         black_bot_factory=lambda: StaticMinimaxBot(
-            name="StaticMinimaxBot-Black",
+            name=f"StaticMinimaxBot-Black-depth-{minimax_depth}",
             depth=minimax_depth,
         ),
     )
@@ -81,27 +149,50 @@ def main() -> None:
         max_half_moves=max_half_moves,
     ).play_series(
         white_bot_factory=lambda: StaticMinimaxBot(
-            name="StaticMinimaxBot-White",
+            name=f"StaticMinimaxBot-White-depth-{minimax_depth}",
             depth=minimax_depth,
         ),
         black_bot_factory=lambda: RandomBot("RandomBot-Black"),
     )
 
-    print("Eksperyment: RandomBot vs StaticMinimaxBot")
-    print(f"Liczba partii na serię: {matches_count}")
-    print(f"Limit półruchów na partię: {max_half_moves}")
-    print(f"Głębokość minimaxa: {minimax_depth}")
+    print(f"######## Depth={minimax_depth} ########")
     print()
 
     print_series_summary(
-        "RandomBot-White vs StaticMinimaxBot-Black",
+        f"RandomBot-White vs StaticMinimaxBot-Black-depth-{minimax_depth}",
         random_white_vs_minimax_black,
     )
 
     print_series_summary(
-        "StaticMinimaxBot-White vs RandomBot-Black",
+        f"StaticMinimaxBot-White-depth-{minimax_depth} vs RandomBot-Black",
         minimax_white_vs_random_black,
     )
+
+
+def main() -> None:
+    """
+    Uruchamia eksperyment porównawczy dla jednej lub wielu głębokości minimaxa.
+    """
+    args = parse_args()
+
+    validate_experiment_config(
+        matches_count=args.matches,
+        max_half_moves=args.max_half_moves,
+        depths=args.depths,
+    )
+
+    print("Eksperyment: RandomBot vs StaticMinimaxBot")
+    print(f"Liczba partii na konfigurację kolorów: {args.matches}")
+    print(f"Limit półruchów na partię: {args.max_half_moves}")
+    print(f"Testowane głębokości minimaxa: {args.depths}")
+    print()
+
+    for depth in args.depths:
+        run_comparison_for_depth(
+            matches_count=args.matches,
+            max_half_moves=args.max_half_moves,
+            minimax_depth=depth,
+        )
 
 
 if __name__ == "__main__":
