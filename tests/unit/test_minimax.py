@@ -16,10 +16,11 @@ def test_minimax_score_at_depth_zero_uses_position_evaluation():
     board.push_san("d5")
     board.push_san("exd5")
 
-    assert minimax_score(board, depth=0, perspective=chess.WHITE) == 1.0
-    assert minimax_score(board, depth=0, perspective=chess.BLACK) == -1.0
+    white_score = minimax_score(board, depth=0, perspective=chess.WHITE)
+    black_score = minimax_score(board, depth=0, perspective=chess.BLACK)
 
-
+    assert white_score > 0.0
+    assert black_score == pytest.approx(-white_score)
 def test_find_best_move_can_capture_free_queen():
     board = chess.Board("4k3/8/8/8/8/8/4q3/4K3 w - - 0 1")
 

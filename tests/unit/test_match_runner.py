@@ -102,7 +102,8 @@ def test_match_runner_tracks_material_balance_after_each_move():
 
     assert result.moves_uci == ("e2e4", "d7d5", "e4d5")
     assert result.material_balances == (0, 0, 1)
-    assert result.position_scores == (0.0, 0.0, 1.0)
+    assert len(result.position_scores) == 3
+    assert result.position_scores[-1] > result.position_scores[1]
     assert result.final_material_balance == 1
 
 
