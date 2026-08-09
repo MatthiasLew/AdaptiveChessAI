@@ -32,3 +32,24 @@ class BaseBot(ABC):
             Wybrany legalny ruch typu chess.Move.
         """
         raise NotImplementedError
+
+    def observe_move(
+        self,
+        board_before_move: chess.Board,
+        move: chess.Move,
+        played_by: chess.Color,
+        is_own_move: bool,
+    ) -> None:
+        """
+        Opcjonalny hook obserwacyjny wywoływany po każdym ruchu w partii.
+
+        Domyślna implementacja nic nie robi. Dzięki temu zwykłe boty,
+        takie jak RandomBot, nie muszą implementować mechanizmu obserwacji.
+
+        Args:
+            board_before_move: Plansza przed wykonaniem ruchu.
+            move: Wykonany ruch.
+            played_by: Kolor, który wykonał ruch.
+            is_own_move: True, jeśli ruch wykonał ten bot.
+        """
+        return None

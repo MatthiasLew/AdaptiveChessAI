@@ -56,7 +56,8 @@ class MatchRunner:
     Do obsługi planszy używa klasy Game, a do wyboru ruchów używa botów.
     """
 
-    def __init__(self, max_half_moves: int = 200, initial_fen: str | None = None, adjudication_material_threshold: int = 3,) -> None:
+    def __init__(self, max_half_moves: int = 200, initial_fen: str | None = None,
+                 adjudication_material_threshold: int = 3, ) -> None:
         """
         Tworzy runner do rozgrywania partii.
 
@@ -97,14 +98,23 @@ class MatchRunner:
         while not game.is_game_over() and half_moves < self.max_half_moves:
             current_bot = white_bot if game.get_turn() == chess.WHITE else black_bot
 
-            board_copy = game.get_board_copy()
-            move = current_bot.choose_move(board_copy)
+            board_before_move = game.get_board_copy()
+            played_by = board_before_move.turn
+
+            move = current_bot.choose_move(board_before_move.copy())
 
             game.make_move(move)
             half_moves += 1
 
-            current_board = game.get_board_copy()
+            _notify_bots_about_move(
+                white_bot=white_bot,
+                black_bot=black_bot,
+                board_before_move=board_before_move,
+                move=move,
+                played_by=played_by,
+            )
 
+            current_board = game.get_board_copy()
             moves_uci.append(move.uci())
             material_balances.append(
                 calculate_material_balance(current_board, chess.WHITE)
@@ -146,3 +156,35 @@ class MatchRunner:
             reached_move_limit=reached_move_limit,
             adjudicated_result=adjudicated_result,
         )
+
+
+def _notify_bots_about_move(
+        white_bot: BaseBot,
+        black_bot: BaseBot,
+        board_before_move: chess.Board,
+        move: chess.Move,
+        played_by: chess.Color,
+) -> None:
+    """
+        Informuje oba boty o wykonanym ruchu.
+
+        Args:
+            white_bot: Bot grający białymi.
+            black_bot: Bot grający czarnymi.
+            board_before_move: Plansza przed wykonaniem ruchu.
+            move: Wykonany ruch.
+            played_by: Kolor, który wykonał ruch.
+        """
+    white_bot.observe_move(
+        board_before_move=board_before_move.copy(stack=False),
+        move=move,
+        played_by=played_by,
+        is_own_move=played_by == chess.WHITE,
+    )
+
+    black_bot.observe_move(
+        board_before_move=board_before_move.copy(stack=False),
+        move=move,
+        played_by=played_by,
+        is_own_move=played_by == chess.BLACK,
+    )

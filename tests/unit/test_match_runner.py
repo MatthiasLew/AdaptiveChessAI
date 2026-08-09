@@ -34,6 +34,25 @@ class ScriptedBot(BaseBot):
         return move
 
 
+class RecordingScriptedBot(ScriptedBot):
+    """
+    Bot testowy zapisujący informacje o ruchach przekazanych przez MatchRunner.
+    """
+
+    def __init__(self, name: str, moves: list[str]) -> None:
+        super().__init__(name, moves)
+        self.observations: list[tuple[str, chess.Color, bool]] = []
+
+    def observe_move(
+            self,
+            board_before_move: chess.Board,
+            move: chess.Move,
+            played_by: chess.Color,
+            is_own_move: bool,
+    ) -> None:
+        self.observations.append((move.uci(), played_by, is_own_move))
+
+
 def test_match_runner_can_play_random_bots_until_move_limit():
     runner = MatchRunner(max_half_moves=10)
 
@@ -142,3 +161,21 @@ def test_match_runner_adjudicates_move_limit_by_material_balance():
 def test_match_runner_rejects_invalid_adjudication_threshold():
     with pytest.raises(ValueError):
         MatchRunner(max_half_moves=1, adjudication_material_threshold=0)
+
+def test_match_runner_notifies_bots_about_observed_moves():
+    white_bot = RecordingScriptedBot("WhiteRecordingBot", ["e2e4"])
+    black_bot = RecordingScriptedBot("BlackRecordingBot", ["e7e5"])
+
+    runner = MatchRunner(max_half_moves=2)
+
+    runner.play(white_bot, black_bot)
+
+    assert white_bot.observations == [
+        ("e2e4", chess.WHITE, True),
+        ("e7e5", chess.BLACK, False),
+    ]
+
+    assert black_bot.observations == [
+        ("e2e4", chess.WHITE, False),
+        ("e7e5", chess.BLACK, True),
+    ]
