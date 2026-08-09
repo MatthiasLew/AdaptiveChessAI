@@ -45,3 +45,13 @@ def test_validate_experiment_config_rejects_invalid_depth():
             max_half_moves=1,
             depths=[1, 0],
         )
+
+
+def test_validate_experiment_config_rejects_invalid_adjudication_threshold():
+    with pytest.raises(ValueError):
+        validate_experiment_config(
+            matches_count=1,
+            max_half_moves=1,
+            depths=[1],
+            adjudication_material_threshold=0,
+        )

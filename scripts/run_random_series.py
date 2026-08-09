@@ -13,6 +13,11 @@ if str(SRC_PATH) not in sys.path:
 from adaptive_chess.analysis.statistics import summarize_matches
 from adaptive_chess.bots.random_bot import RandomBot
 from adaptive_chess.data.csv_exporter import export_match_results_to_csv
+from adaptive_chess.evaluation.position import POSITION_EVALUATION_VERSION
+from adaptive_chess.experiments.metadata import (
+    resolve_metadata_output_path,
+    write_experiment_metadata,
+)
 from adaptive_chess.experiments.series_runner import SeriesRunner
 
 
@@ -36,13 +41,77 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--adjudication-material-threshold",
+        type=int,
+        default=3,
+        help="Material threshold for adjudicating move-limit matches.",
+    )
+
+    parser.add_argument(
         "--output-csv",
         type=str,
         default=None,
         help="Optional path for exporting match results to CSV.",
     )
 
+    parser.add_argument(
+        "--output-metadata",
+        type=str,
+        default=None,
+        help="Optional path for exporting experiment metadata to JSON.",
+    )
+
     return parser.parse_args()
+
+
+def validate_experiment_config(
+    matches_count: int,
+    max_half_moves: int,
+    adjudication_material_threshold: int,
+) -> None:
+    if matches_count < 1:
+        raise ValueError("--matches must be at least 1.")
+
+    if max_half_moves < 1:
+        raise ValueError("--max-half-moves must be at least 1.")
+
+    if adjudication_material_threshold < 1:
+        raise ValueError("--adjudication-material-threshold must be at least 1.")
+
+
+def build_experiment_metadata(args: argparse.Namespace) -> dict[str, object]:
+    return {
+        "experiment_type": "random_vs_random",
+        "matches_count": args.matches,
+        "max_half_moves": args.max_half_moves,
+        "adjudication_material_threshold": args.adjudication_material_threshold,
+        "position_evaluation_version": POSITION_EVALUATION_VERSION,
+        "series": [
+            {
+                "experiment_name": "RandomBot-White vs RandomBot-Black",
+                "white_bot": "RandomBot",
+                "black_bot": "RandomBot",
+            }
+        ],
+        "output_csv": args.output_csv,
+    }
+
+
+def maybe_write_metadata(args: argparse.Namespace) -> None:
+    if args.output_csv is None and args.output_metadata is None:
+        return
+
+    metadata_path = resolve_metadata_output_path(
+        output_csv_path=args.output_csv,
+        output_metadata_path=args.output_metadata,
+    )
+
+    saved_path = write_experiment_metadata(
+        metadata=build_experiment_metadata(args),
+        output_path=metadata_path,
+    )
+
+    print(f"Zapisano metadane: {saved_path}")
 
 
 def main() -> None:
@@ -52,9 +121,16 @@ def main() -> None:
     """
     args = parse_args()
 
+    validate_experiment_config(
+        matches_count=args.matches,
+        max_half_moves=args.max_half_moves,
+        adjudication_material_threshold=args.adjudication_material_threshold,
+    )
+
     runner = SeriesRunner(
         matches_count=args.matches,
         max_half_moves=args.max_half_moves,
+        adjudication_material_threshold=args.adjudication_material_threshold,
     )
 
     results = runner.play_series(
@@ -67,6 +143,8 @@ def main() -> None:
     print("=== RandomBot vs RandomBot — seria partii ===")
     print(f"Liczba partii: {summary.total_matches}")
     print(f"Limit półruchów na partię: {args.max_half_moves}")
+    print(f"Próg adjudykacji materiałowej: {args.adjudication_material_threshold}")
+    print(f"Wersja oceny pozycji: {POSITION_EVALUATION_VERSION}")
     print()
     print("Wyniki formalne:")
     print(f"Wygrane białych: {summary.white_wins}")
@@ -105,6 +183,8 @@ def main() -> None:
         )
         print()
         print(f"Zapisano CSV: {saved_path}")
+
+    maybe_write_metadata(args)
 
 
 if __name__ == "__main__":

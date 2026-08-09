@@ -4,7 +4,7 @@ from adaptive_chess.evaluation.material import calculate_material_balance
 
 
 CHECKMATE_SCORE = 10_000
-
+POSITION_EVALUATION_VERSION = "material_mobility_center_v1"
 MATERIAL_WEIGHT = 1.0
 MOBILITY_WEIGHT = 0.05
 CENTER_CONTROL_WEIGHT = 0.25

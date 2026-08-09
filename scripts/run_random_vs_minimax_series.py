@@ -14,7 +14,12 @@ from adaptive_chess.analysis.statistics import summarize_matches
 from adaptive_chess.bots.random_bot import RandomBot
 from adaptive_chess.bots.static_minimax_bot import StaticMinimaxBot
 from adaptive_chess.data.csv_exporter import export_match_series_collection_to_csv
+from adaptive_chess.evaluation.position import POSITION_EVALUATION_VERSION
 from adaptive_chess.experiments.match_runner import MatchResult
+from adaptive_chess.experiments.metadata import (
+    resolve_metadata_output_path,
+    write_experiment_metadata,
+)
 from adaptive_chess.experiments.series_runner import SeriesRunner
 
 
@@ -52,10 +57,24 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--adjudication-material-threshold",
+        type=int,
+        default=3,
+        help="Material threshold for adjudicating move-limit matches.",
+    )
+
+    parser.add_argument(
         "--output-csv",
         type=str,
         default=None,
         help="Optional path for exporting match results to CSV.",
+    )
+
+    parser.add_argument(
+        "--output-metadata",
+        type=str,
+        default=None,
+        help="Optional path for exporting experiment metadata to JSON.",
     )
 
     return parser.parse_args()
@@ -65,6 +84,7 @@ def validate_experiment_config(
     matches_count: int,
     max_half_moves: int,
     depths: list[int],
+    adjudication_material_threshold: int = 3,
 ) -> None:
     """
     Sprawdza poprawność konfiguracji eksperymentu.
@@ -73,6 +93,7 @@ def validate_experiment_config(
         matches_count: Liczba partii na konfigurację.
         max_half_moves: Limit półruchów.
         depths: Lista głębokości minimaxa.
+        adjudication_material_threshold: Próg materiałowy adjudykacji.
 
     Raises:
         ValueError: Jeśli konfiguracja jest niepoprawna.
@@ -88,6 +109,9 @@ def validate_experiment_config(
 
     if any(depth < 1 for depth in depths):
         raise ValueError("Every minimax depth must be at least 1.")
+
+    if adjudication_material_threshold < 1:
+        raise ValueError("--adjudication-material-threshold must be at least 1.")
 
 
 def print_series_summary(title: str, results: tuple[MatchResult, ...]) -> None:
@@ -142,6 +166,7 @@ def run_comparison_for_depth(
     matches_count: int,
     max_half_moves: int,
     minimax_depth: int,
+    adjudication_material_threshold: int,
 ) -> list[tuple[str, tuple[MatchResult, ...]]]:
     """
     Uruchamia porównanie RandomBot vs StaticMinimaxBot dla jednej głębokości minimaxa.
@@ -150,6 +175,7 @@ def run_comparison_for_depth(
         matches_count: Liczba partii w każdej konfiguracji kolorów.
         max_half_moves: Limit półruchów na partię.
         minimax_depth: Głębokość minimaxa.
+        adjudication_material_threshold: Próg materiałowy adjudykacji.
 
     Returns:
         Lista serii wyników gotowa do opcjonalnego eksportu CSV.
@@ -164,6 +190,7 @@ def run_comparison_for_depth(
     random_white_vs_minimax_black = SeriesRunner(
         matches_count=matches_count,
         max_half_moves=max_half_moves,
+        adjudication_material_threshold=adjudication_material_threshold,
     ).play_series(
         white_bot_factory=lambda: RandomBot("RandomBot-White"),
         black_bot_factory=lambda: StaticMinimaxBot(
@@ -175,6 +202,7 @@ def run_comparison_for_depth(
     minimax_white_vs_random_black = SeriesRunner(
         matches_count=matches_count,
         max_half_moves=max_half_moves,
+        adjudication_material_threshold=adjudication_material_threshold,
     ).play_series(
         white_bot_factory=lambda: StaticMinimaxBot(
             name=f"StaticMinimaxBot-White-depth-{minimax_depth}",
@@ -202,6 +230,66 @@ def run_comparison_for_depth(
     ]
 
 
+def build_experiment_metadata(args: argparse.Namespace) -> dict[str, object]:
+    """
+    Buduje słownik metadanych opisujących konfigurację eksperymentu.
+    """
+    series = []
+
+    for depth in args.depths:
+        series.append(
+            {
+                "experiment_name": (
+                    f"RandomBot-White vs StaticMinimaxBot-Black-depth-{depth}"
+                ),
+                "white_bot": "RandomBot",
+                "black_bot": "StaticMinimaxBot",
+                "minimax_depth": depth,
+            }
+        )
+        series.append(
+            {
+                "experiment_name": (
+                    f"StaticMinimaxBot-White-depth-{depth} vs RandomBot-Black"
+                ),
+                "white_bot": "StaticMinimaxBot",
+                "black_bot": "RandomBot",
+                "minimax_depth": depth,
+            }
+        )
+
+    return {
+        "experiment_type": "random_vs_static_minimax",
+        "matches_count_per_color_configuration": args.matches,
+        "max_half_moves": args.max_half_moves,
+        "minimax_depths": args.depths,
+        "adjudication_material_threshold": args.adjudication_material_threshold,
+        "position_evaluation_version": POSITION_EVALUATION_VERSION,
+        "series": series,
+        "output_csv": args.output_csv,
+    }
+
+
+def maybe_write_metadata(args: argparse.Namespace) -> None:
+    """
+    Zapisuje metadane, jeśli użytkownik podał output CSV albo output metadata.
+    """
+    if args.output_csv is None and args.output_metadata is None:
+        return
+
+    metadata_path = resolve_metadata_output_path(
+        output_csv_path=args.output_csv,
+        output_metadata_path=args.output_metadata,
+    )
+
+    saved_path = write_experiment_metadata(
+        metadata=build_experiment_metadata(args),
+        output_path=metadata_path,
+    )
+
+    print(f"Zapisano metadane: {saved_path}")
+
+
 def main() -> None:
     """
     Uruchamia eksperyment porównawczy dla jednej lub wielu głębokości minimaxa.
@@ -212,12 +300,15 @@ def main() -> None:
         matches_count=args.matches,
         max_half_moves=args.max_half_moves,
         depths=args.depths,
+        adjudication_material_threshold=args.adjudication_material_threshold,
     )
 
     print("Eksperyment: RandomBot vs StaticMinimaxBot")
     print(f"Liczba partii na konfigurację kolorów: {args.matches}")
     print(f"Limit półruchów na partię: {args.max_half_moves}")
     print(f"Testowane głębokości minimaxa: {args.depths}")
+    print(f"Próg adjudykacji materiałowej: {args.adjudication_material_threshold}")
+    print(f"Wersja oceny pozycji: {POSITION_EVALUATION_VERSION}")
     print()
 
     all_series: list[tuple[str, tuple[MatchResult, ...]]] = []
@@ -227,6 +318,7 @@ def main() -> None:
             matches_count=args.matches,
             max_half_moves=args.max_half_moves,
             minimax_depth=depth,
+            adjudication_material_threshold=args.adjudication_material_threshold,
         )
         all_series.extend(depth_series)
 
@@ -236,6 +328,8 @@ def main() -> None:
             output_path=args.output_csv,
         )
         print(f"Zapisano CSV: {saved_path}")
+
+    maybe_write_metadata(args)
 
 
 if __name__ == "__main__":
