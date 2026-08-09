@@ -257,7 +257,19 @@ def build_analysis_commands(args: argparse.Namespace) -> list[SuiteCommand]:
                     ],
                 )
             )
-
+    commands.append(
+        SuiteCommand(
+            name="suite_summary",
+            command=[
+                python_executable,
+                str(PROJECT_ROOT / "scripts" / "summarize_experiment_suite.py"),
+                "--input-dir",
+                str(output_dir),
+                "--output-md",
+                str(output_dir / "suite_summary.md"),
+            ],
+        )
+    )
     return commands
 
 
