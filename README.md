@@ -66,3 +66,11 @@ Szablon opisu wyników do pracy inżynierskiej znajduje się w:
 ```text
 docs/results_writeup_template.md
 ```
+
+## Finalne komendy badawcze
+
+Finalna lista komend do uruchomienia badań znajduje się w:
+
+```text
+docs/final_research_commands.md
+```
