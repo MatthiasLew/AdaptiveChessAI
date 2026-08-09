@@ -74,3 +74,23 @@ Finalna lista komend do uruchomienia badań znajduje się w:
 ```text
 docs/final_research_commands.md
 ```
+
+## Domknięcie MVP
+
+Status domknięcia MVP opisano w dokumencie:
+
+```text
+docs/mvp_closure.md
+```
+
+Aktualna decyzja projektowa:
+
+```text
+MVP badawcze: domknięte
+```
+
+Następny krok po domknięciu MVP:
+
+```text
+uruchomienie finalnych eksperymentów i analiza wyników
+```
