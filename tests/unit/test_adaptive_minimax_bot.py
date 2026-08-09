@@ -68,3 +68,40 @@ def test_adaptive_minimax_bot_observes_opponent_move():
 
     assert bot.opponent_profile.observed_moves == 1
     assert bot.opponent_profile.center_moves == 1
+
+def test_adaptive_minimax_bot_uses_adaptive_adjustment(monkeypatch):
+    board = chess.Board()
+    bot = AdaptiveMinimaxBot(depth=1)
+
+    preferred_move = chess.Move.from_uci("b1c3")
+
+    def fake_alpha_beta_score(
+        board: chess.Board,
+        depth: int,
+        perspective: chess.Color,
+    ) -> float:
+        return 0.0
+
+    def fake_adaptive_adjustment(
+        board_after_move: chess.Board,
+        move: chess.Move,
+        perspective: chess.Color,
+        opponent_profile,
+    ) -> float:
+        if move == preferred_move:
+            return 1.0
+
+        return 0.0
+
+    monkeypatch.setattr(
+        "adaptive_chess.bots.adaptive_minimax_bot.alpha_beta_score",
+        fake_alpha_beta_score,
+    )
+    monkeypatch.setattr(
+        "adaptive_chess.bots.adaptive_minimax_bot.calculate_adaptive_move_adjustment",
+        fake_adaptive_adjustment,
+    )
+
+    move = bot.choose_move(board)
+
+    assert move == preferred_move

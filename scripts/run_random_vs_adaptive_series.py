@@ -2,16 +2,17 @@ import argparse
 from pathlib import Path
 import sys
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_PATH = PROJECT_ROOT / "src"
 
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
-
 from adaptive_chess.analysis.statistics import summarize_matches
-from adaptive_chess.bots.adaptive_minimax_bot import AdaptiveMinimaxBot
+from adaptive_chess.bots.adaptive_minimax_bot import (
+    ADAPTIVE_BOT_VERSION,
+    AdaptiveMinimaxBot,
+)
 from adaptive_chess.bots.random_bot import RandomBot
 from adaptive_chess.data.csv_exporter import export_match_series_collection_to_csv
 from adaptive_chess.evaluation.position import POSITION_EVALUATION_VERSION
@@ -81,10 +82,10 @@ def parse_args() -> argparse.Namespace:
 
 
 def validate_experiment_config(
-    matches_count: int,
-    max_half_moves: int,
-    depths: list[int],
-    adjudication_material_threshold: int = 3,
+        matches_count: int,
+        max_half_moves: int,
+        depths: list[int],
+        adjudication_material_threshold: int = 3,
 ) -> None:
     """
     Sprawdza poprawność konfiguracji eksperymentu.
@@ -163,10 +164,10 @@ def print_series_summary(title: str, results: tuple[MatchResult, ...]) -> None:
 
 
 def run_comparison_for_depth(
-    matches_count: int,
-    max_half_moves: int,
-    adaptive_depth: int,
-    adjudication_material_threshold: int,
+        matches_count: int,
+        max_half_moves: int,
+        adaptive_depth: int,
+        adjudication_material_threshold: int,
 ) -> list[tuple[str, tuple[MatchResult, ...]]]:
     """
     Uruchamia porównanie RandomBot vs AdaptiveMinimaxBot dla jednej głębokości.
@@ -265,7 +266,7 @@ def build_experiment_metadata(args: argparse.Namespace) -> dict[str, object]:
         "adaptive_minimax_depths": args.depths,
         "adjudication_material_threshold": args.adjudication_material_threshold,
         "position_evaluation_version": POSITION_EVALUATION_VERSION,
-        "adaptive_bot_version": "profile_collection_v1",
+        "adaptive_bot_version": ADAPTIVE_BOT_VERSION,
         "series": series,
         "output_csv": args.output_csv,
     }
@@ -310,7 +311,7 @@ def main() -> None:
     print(f"Testowane głębokości bota adaptacyjnego: {args.depths}")
     print(f"Próg adjudykacji materiałowej: {args.adjudication_material_threshold}")
     print(f"Wersja oceny pozycji: {POSITION_EVALUATION_VERSION}")
-    print("Wersja adaptacji: profile_collection_v1")
+    print(f"Wersja adaptacji: {ADAPTIVE_BOT_VERSION}")
     print()
 
     all_series: list[tuple[str, tuple[MatchResult, ...]]] = []

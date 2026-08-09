@@ -1,19 +1,25 @@
 import chess
 
+from adaptive_chess.adaptation.adaptive_scoring import (
+    calculate_adaptive_move_adjustment,
+)
 from adaptive_chess.adaptation.opponent_profile import OpponentMoveProfile
 from adaptive_chess.bots.base_bot import BaseBot
-from adaptive_chess.search.minimax import find_best_move_alpha_beta
+from adaptive_chess.search.minimax import alpha_beta_score
+
+
+ADAPTIVE_BOT_VERSION = "profile_adjusted_move_scoring_v1"
 
 
 class AdaptiveMinimaxBot(BaseBot):
     """
-    Pierwsza wersja bota adaptacyjnego.
+    Bot adaptacyjny oparty na minimaxie z alfa-beta pruning.
 
-    Bot wybiera ruchy za pomocą minimaxa z alfa-beta pruning,
-    a dodatkowo obserwuje ruchy przeciwnika i zapisuje prosty profil jego stylu.
+    Bot obserwuje ruchy przeciwnika, buduje prosty profil jego stylu
+    i wykorzystuje ten profil jako dodatkową korektę przy wyborze ruchu.
 
-    Wersja v1 skupia się na zbieraniu danych o przeciwniku.
-    W kolejnej wersji profil będzie używany do modyfikowania decyzji bota.
+    Adaptacja nie zastępuje oceny minimaxowej. Jest dodatkowym składnikiem,
+    który może rozstrzygać między podobnie ocenionymi ruchami.
     """
 
     def __init__(self, name: str = "AdaptiveMinimaxBot", depth: int = 1) -> None:
@@ -36,7 +42,7 @@ class AdaptiveMinimaxBot(BaseBot):
 
     def choose_move(self, board: chess.Board) -> chess.Move:
         """
-        Wybiera ruch przy użyciu minimaxa z alfa-beta pruning.
+        Wybiera ruch przy użyciu minimaxa i adaptacyjnej korekty profilu przeciwnika.
 
         Args:
             board: Aktualna plansza.
@@ -46,12 +52,39 @@ class AdaptiveMinimaxBot(BaseBot):
         """
         board_copy = board.copy()
         perspective = board_copy.turn
+        legal_moves = list(board_copy.legal_moves)
 
-        return find_best_move_alpha_beta(
-            board=board_copy,
-            depth=self.depth,
-            perspective=perspective,
-        )
+        if not legal_moves:
+            raise ValueError("Cannot choose a move because there are no legal moves.")
+
+        best_move = legal_moves[0]
+        best_score = float("-inf")
+
+        for move in legal_moves:
+            board_copy.push(move)
+
+            base_score = alpha_beta_score(
+                board=board_copy,
+                depth=self.depth - 1,
+                perspective=perspective,
+            )
+
+            adaptive_adjustment = calculate_adaptive_move_adjustment(
+                board_after_move=board_copy,
+                move=move,
+                perspective=perspective,
+                opponent_profile=self.opponent_profile,
+            )
+
+            total_score = base_score + adaptive_adjustment
+
+            board_copy.pop()
+
+            if total_score > best_score:
+                best_score = total_score
+                best_move = move
+
+        return best_move
 
     def observe_move(
         self,
