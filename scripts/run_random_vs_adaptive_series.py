@@ -7,7 +7,7 @@ SRC_PATH = PROJECT_ROOT / "src"
 
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
-
+from adaptive_chess.adaptation.opponent_profile import OpponentMoveProfile
 from adaptive_chess.analysis.statistics import summarize_matches
 from adaptive_chess.bots.adaptive_minimax_bot import (
     ADAPTIVE_BOT_VERSION,
@@ -187,6 +187,8 @@ def run_comparison_for_depth(
     adaptive_vs_random_name = (
         f"AdaptiveMinimaxBot-White-depth-{adaptive_depth} vs RandomBot-Black"
     )
+    random_vs_adaptive_profile = OpponentMoveProfile()
+    adaptive_vs_random_profile = OpponentMoveProfile()
 
     random_white_vs_adaptive_black = SeriesRunner(
         matches_count=matches_count,
@@ -197,6 +199,7 @@ def run_comparison_for_depth(
         black_bot_factory=lambda: AdaptiveMinimaxBot(
             name=f"AdaptiveMinimaxBot-Black-depth-{adaptive_depth}",
             depth=adaptive_depth,
+            opponent_profile=random_vs_adaptive_profile,
         ),
     )
 
@@ -208,6 +211,7 @@ def run_comparison_for_depth(
         white_bot_factory=lambda: AdaptiveMinimaxBot(
             name=f"AdaptiveMinimaxBot-White-depth-{adaptive_depth}",
             depth=adaptive_depth,
+            opponent_profile=adaptive_vs_random_profile,
         ),
         black_bot_factory=lambda: RandomBot("RandomBot-Black"),
     )
@@ -224,6 +228,13 @@ def run_comparison_for_depth(
         adaptive_vs_random_name,
         adaptive_white_vs_random_black,
     )
+    print("Profil przeciwnika — Adaptive jako czarne:")
+    print(random_vs_adaptive_profile.to_dict())
+    print()
+
+    print("Profil przeciwnika — Adaptive jako białe:")
+    print(adaptive_vs_random_profile.to_dict())
+    print()
 
     return [
         (random_vs_adaptive_name, random_white_vs_adaptive_black),
@@ -267,6 +278,7 @@ def build_experiment_metadata(args: argparse.Namespace) -> dict[str, object]:
         "adjudication_material_threshold": args.adjudication_material_threshold,
         "position_evaluation_version": POSITION_EVALUATION_VERSION,
         "adaptive_bot_version": ADAPTIVE_BOT_VERSION,
+        "adaptive_profile_scope": "series_persistent",
         "series": series,
         "output_csv": args.output_csv,
     }

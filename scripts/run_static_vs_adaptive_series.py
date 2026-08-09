@@ -9,7 +9,7 @@ SRC_PATH = PROJECT_ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
-
+from adaptive_chess.adaptation.opponent_profile import OpponentMoveProfile
 from adaptive_chess.analysis.statistics import summarize_matches
 from adaptive_chess.bots.adaptive_minimax_bot import (
     ADAPTIVE_BOT_VERSION,
@@ -191,7 +191,8 @@ def run_comparison_for_depth(
         f"AdaptiveMinimaxBot-White-depth-{depth} "
         f"vs StaticMinimaxBot-Black-depth-{depth}"
     )
-
+    static_vs_adaptive_profile = OpponentMoveProfile()
+    adaptive_vs_static_profile = OpponentMoveProfile()
     static_white_vs_adaptive_black = SeriesRunner(
         matches_count=matches_count,
         max_half_moves=max_half_moves,
@@ -204,6 +205,7 @@ def run_comparison_for_depth(
         black_bot_factory=lambda: AdaptiveMinimaxBot(
             name=f"AdaptiveMinimaxBot-Black-depth-{depth}",
             depth=depth,
+            opponent_profile=static_vs_adaptive_profile,
         ),
     )
 
@@ -215,6 +217,7 @@ def run_comparison_for_depth(
         white_bot_factory=lambda: AdaptiveMinimaxBot(
             name=f"AdaptiveMinimaxBot-White-depth-{depth}",
             depth=depth,
+            opponent_profile=adaptive_vs_static_profile,
         ),
         black_bot_factory=lambda: StaticMinimaxBot(
             name=f"StaticMinimaxBot-Black-depth-{depth}",
@@ -234,7 +237,13 @@ def run_comparison_for_depth(
         adaptive_vs_static_name,
         adaptive_white_vs_static_black,
     )
+    print("Profil przeciwnika — Adaptive jako czarne:")
+    print(static_vs_adaptive_profile.to_dict())
+    print()
 
+    print("Profil przeciwnika — Adaptive jako białe:")
+    print(adaptive_vs_static_profile.to_dict())
+    print()
     return [
         (static_vs_adaptive_name, static_white_vs_adaptive_black),
         (adaptive_vs_static_name, adaptive_white_vs_static_black),
@@ -281,6 +290,7 @@ def build_experiment_metadata(args: argparse.Namespace) -> dict[str, object]:
         "adjudication_material_threshold": args.adjudication_material_threshold,
         "position_evaluation_version": POSITION_EVALUATION_VERSION,
         "adaptive_bot_version": ADAPTIVE_BOT_VERSION,
+        "adaptive_profile_scope": "series_persistent",
         "series": series,
         "output_csv": args.output_csv,
     }

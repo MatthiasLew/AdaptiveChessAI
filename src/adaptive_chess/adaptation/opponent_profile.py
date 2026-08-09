@@ -81,6 +81,22 @@ class OpponentMoveProfile:
         """
         return self._safe_ratio(self.center_moves)
 
+    def to_dict(self) -> dict[str, int | float]:
+        """
+        Zwraca profil w formie słownika.
+
+        Przydatne do debugowania, metadanych oraz przyszłego eksportu profili.
+        """
+        return {
+            "observed_moves": self.observed_moves,
+            "captures": self.captures,
+            "checks": self.checks,
+            "center_moves": self.center_moves,
+            "capture_ratio": self.capture_ratio,
+            "check_ratio": self.check_ratio,
+            "center_move_ratio": self.center_move_ratio,
+        }
+
     def _safe_ratio(self, value: int) -> float:
         if self.observed_moves == 0:
             return 0.0

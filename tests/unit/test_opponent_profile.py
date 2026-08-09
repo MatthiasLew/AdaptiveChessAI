@@ -69,3 +69,22 @@ def test_opponent_profile_rejects_illegal_move():
 
     with pytest.raises(ValueError):
         profile.observe_move(board, move)
+
+
+def test_opponent_profile_can_be_converted_to_dict():
+    profile = OpponentMoveProfile(
+        observed_moves=4,
+        captures=2,
+        checks=1,
+        center_moves=3,
+    )
+
+    data = profile.to_dict()
+
+    assert data["observed_moves"] == 4
+    assert data["captures"] == 2
+    assert data["checks"] == 1
+    assert data["center_moves"] == 3
+    assert data["capture_ratio"] == 0.5
+    assert data["check_ratio"] == 0.25
+    assert data["center_move_ratio"] == 0.75

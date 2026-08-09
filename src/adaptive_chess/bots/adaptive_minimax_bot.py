@@ -18,17 +18,23 @@ class AdaptiveMinimaxBot(BaseBot):
     Bot obserwuje ruchy przeciwnika, buduje prosty profil jego stylu
     i wykorzystuje ten profil jako dodatkową korektę przy wyborze ruchu.
 
-    Adaptacja nie zastępuje oceny minimaxowej. Jest dodatkowym składnikiem,
-    który może rozstrzygać między podobnie ocenionymi ruchami.
+    Profil przeciwnika może być własny dla pojedynczego bota albo współdzielony
+    między botami tworzonymi w kolejnych partiach tej samej serii.
     """
 
-    def __init__(self, name: str = "AdaptiveMinimaxBot", depth: int = 1) -> None:
+    def __init__(
+        self,
+        name: str = "AdaptiveMinimaxBot",
+        depth: int = 1,
+        opponent_profile: OpponentMoveProfile | None = None,
+    ) -> None:
         """
         Tworzy adaptacyjnego bota minimaxowego.
 
         Args:
             name: Nazwa bota.
             depth: Głębokość przeszukiwania minimax.
+            opponent_profile: Opcjonalny współdzielony profil przeciwnika.
 
         Raises:
             ValueError: Jeśli depth jest mniejsze niż 1.
@@ -38,7 +44,9 @@ class AdaptiveMinimaxBot(BaseBot):
 
         super().__init__(name)
         self.depth = depth
-        self.opponent_profile = OpponentMoveProfile()
+        self.opponent_profile = (
+            opponent_profile if opponent_profile is not None else OpponentMoveProfile()
+        )
 
     def choose_move(self, board: chess.Board) -> chess.Move:
         """

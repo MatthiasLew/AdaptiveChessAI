@@ -2,7 +2,7 @@ import chess
 import pytest
 
 from adaptive_chess.bots.adaptive_minimax_bot import AdaptiveMinimaxBot
-
+from adaptive_chess.adaptation.opponent_profile import OpponentMoveProfile
 
 def test_adaptive_minimax_bot_has_default_name_depth_and_empty_profile():
     bot = AdaptiveMinimaxBot()
@@ -105,3 +105,29 @@ def test_adaptive_minimax_bot_uses_adaptive_adjustment(monkeypatch):
     move = bot.choose_move(board)
 
     assert move == preferred_move
+
+def test_adaptive_minimax_bot_can_use_shared_opponent_profile():
+    shared_profile = OpponentMoveProfile()
+
+    first_bot = AdaptiveMinimaxBot(
+        name="FirstAdaptiveBot",
+        opponent_profile=shared_profile,
+    )
+    second_bot = AdaptiveMinimaxBot(
+        name="SecondAdaptiveBot",
+        opponent_profile=shared_profile,
+    )
+
+    board = chess.Board()
+    move = chess.Move.from_uci("e2e4")
+
+    first_bot.observe_move(
+        board_before_move=board,
+        move=move,
+        played_by=chess.WHITE,
+        is_own_move=False,
+    )
+
+    assert first_bot.opponent_profile.observed_moves == 1
+    assert second_bot.opponent_profile.observed_moves == 1
+    assert shared_profile.observed_moves == 1
