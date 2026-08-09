@@ -36,3 +36,19 @@ Testy projektu:
 ```powershell
 python -m pytest
 ```
+
+## Status MVP
+
+Aktualny status MVP projektu opisano w dokumencie:
+
+```text
+docs/mvp_status.md
+```
+
+Dokument zawiera:
+
+- podsumowanie obecnego zakresu projektu,
+- opis działających komponentów,
+- ograniczenia aktualnej wersji,
+- plan domknięcia MVP,
+- proponowany zestaw eksperymentów do pracy inżynierskiej.
