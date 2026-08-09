@@ -1,6 +1,7 @@
 import pytest
 
 from adaptive_chess.analysis.statistics import (
+    calculate_adjudicated_result_counts,
     calculate_average_final_material_balance,
     calculate_average_half_moves,
     calculate_result_counts,
@@ -15,11 +16,16 @@ def create_match_result(
     half_moves: int,
     final_material_balance: int,
     reached_move_limit: bool = False,
+    adjudicated_result: str | None = None,
 ) -> MatchResult:
+    if adjudicated_result is None:
+        adjudicated_result = result
+
     return MatchResult(
         white_bot_name="WhiteBot",
         black_bot_name="BlackBot",
         result=result,
+        adjudicated_result=adjudicated_result,
         termination_reason=(
             TerminationReason.MOVE_LIMIT
             if reached_move_limit
@@ -32,7 +38,6 @@ def create_match_result(
         final_material_balance=final_material_balance,
         final_fen="dummy-fen",
         reached_move_limit=reached_move_limit,
-        adjudicated_result=result,
     )
 
 
@@ -51,6 +56,45 @@ def test_calculate_result_counts():
     assert counts["1/2-1/2"] == 2
 
 
+def test_calculate_adjudicated_result_counts():
+    matches = [
+        create_match_result(
+            result="1/2-1/2",
+            adjudicated_result="1-0",
+            half_moves=100,
+            final_material_balance=9,
+            reached_move_limit=True,
+        ),
+        create_match_result(
+            result="1/2-1/2",
+            adjudicated_result="0-1",
+            half_moves=100,
+            final_material_balance=-8,
+            reached_move_limit=True,
+        ),
+        create_match_result(
+            result="1/2-1/2",
+            adjudicated_result="1/2-1/2",
+            half_moves=100,
+            final_material_balance=1,
+            reached_move_limit=True,
+        ),
+        create_match_result(
+            result="1-0",
+            adjudicated_result="1-0",
+            half_moves=40,
+            final_material_balance=3,
+            reached_move_limit=False,
+        ),
+    ]
+
+    counts = calculate_adjudicated_result_counts(matches)
+
+    assert counts["1-0"] == 2
+    assert counts["0-1"] == 1
+    assert counts["1/2-1/2"] == 1
+
+
 def test_calculate_result_counts_rejects_unknown_result():
     matches = [
         create_match_result("invalid", 20, 0),
@@ -58,6 +102,20 @@ def test_calculate_result_counts_rejects_unknown_result():
 
     with pytest.raises(ValueError):
         calculate_result_counts(matches)
+
+
+def test_calculate_adjudicated_result_counts_rejects_unknown_result():
+    matches = [
+        create_match_result(
+            result="1/2-1/2",
+            adjudicated_result="invalid",
+            half_moves=20,
+            final_material_balance=0,
+        ),
+    ]
+
+    with pytest.raises(ValueError):
+        calculate_adjudicated_result_counts(matches)
 
 
 def test_calculate_average_half_moves():
@@ -100,19 +158,43 @@ def test_count_move_limit_reached():
 
 def test_summarize_matches():
     matches = [
-        create_match_result("1-0", 10, 3, reached_move_limit=False),
-        create_match_result("0-1", 20, -3, reached_move_limit=False),
-        create_match_result("1/2-1/2", 30, 0, reached_move_limit=True),
+        create_match_result(
+            result="1-0",
+            adjudicated_result="1-0",
+            half_moves=10,
+            final_material_balance=3,
+            reached_move_limit=False,
+        ),
+        create_match_result(
+            result="0-1",
+            adjudicated_result="0-1",
+            half_moves=20,
+            final_material_balance=-3,
+            reached_move_limit=False,
+        ),
+        create_match_result(
+            result="1/2-1/2",
+            adjudicated_result="1-0",
+            half_moves=30,
+            final_material_balance=9,
+            reached_move_limit=True,
+        ),
     ]
 
     summary = summarize_matches(matches)
 
     assert summary.total_matches == 3
+
     assert summary.white_wins == 1
     assert summary.black_wins == 1
     assert summary.draws == 1
+
+    assert summary.adjudicated_white_wins == 2
+    assert summary.adjudicated_black_wins == 1
+    assert summary.adjudicated_draws == 0
+
     assert summary.average_half_moves == 20.0
-    assert summary.average_final_material_balance == 0.0
+    assert summary.average_final_material_balance == 3.0
     assert summary.move_limit_reached_count == 1
 
 
@@ -120,9 +202,15 @@ def test_summarize_empty_matches():
     summary = summarize_matches([])
 
     assert summary.total_matches == 0
+
     assert summary.white_wins == 0
     assert summary.black_wins == 0
     assert summary.draws == 0
+
+    assert summary.adjudicated_white_wins == 0
+    assert summary.adjudicated_black_wins == 0
+    assert summary.adjudicated_draws == 0
+
     assert summary.average_half_moves == 0.0
     assert summary.average_final_material_balance == 0.0
     assert summary.move_limit_reached_count == 0

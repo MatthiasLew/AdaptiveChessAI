@@ -41,6 +41,11 @@ def main() -> None:
     print(f"Wygrane czarnych: {summary.black_wins}")
     print(f"Remisy: {summary.draws}")
     print()
+    print("Wyniki techniczne:")
+    print(f"Wygrane białych: {summary.adjudicated_white_wins}")
+    print(f"Wygrane czarnych: {summary.adjudicated_black_wins}")
+    print(f"Remisy: {summary.adjudicated_draws}")
+    print()
     print("Statystyki:")
     print(f"Średnia liczba półruchów: {summary.average_half_moves:.2f}")
     print(
