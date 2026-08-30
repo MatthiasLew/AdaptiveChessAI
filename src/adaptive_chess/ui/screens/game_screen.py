@@ -45,7 +45,7 @@ class GameScreen(QWidget):
     - odpowiedź bota,
     - historię ruchów,
     - status gry,
-    - przejście do ekranu podsumowania po zakończeniu partii.
+    - zakończenie i podsumowanie aktualnej partii.
     """
 
     def __init__(
@@ -68,12 +68,38 @@ class GameScreen(QWidget):
         self._human_color_combo = QComboBox()
         self._depth_spinbox = QSpinBox()
 
+        self._new_game_button = QPushButton("Nowa gra")
+        self._finish_game_button = QPushButton("Zakończ i podsumuj")
+        self._clear_game_button = QPushButton("Wyczyść partię")
+
         self._status_label = QLabel("Nie rozpoczęto gry.")
         self._fen_label = QLabel("-")
         self._history_list = QListWidget()
 
         self._build_ui()
-        self._initialize_default_board()
+        self.prepare_for_new_game()
+
+    def prepare_for_new_game(self) -> None:
+        """
+        Przygotowuje ekran gry do rozpoczęcia nowej partii.
+
+        Nie startuje automatycznie partii. Użytkownik nadal musi kliknąć
+        przycisk „Nowa gra”, żeby utworzyć sesję.
+        """
+        self._session = None
+        self._clear_selection()
+
+        board = chess.Board()
+        self._board_widget.set_flipped(False)
+        self._board_widget.set_board(board)
+
+        self._status_label.setText("Wybierz ustawienia i kliknij „Nowa gra”.")
+        self._fen_label.setText(board.fen())
+        self._history_list.clear()
+
+        self._set_configuration_enabled(True)
+        self._finish_game_button.setEnabled(False)
+        self._clear_game_button.setEnabled(False)
 
     def _build_ui(self) -> None:
         root_layout = QVBoxLayout()
@@ -134,13 +160,7 @@ class GameScreen(QWidget):
         self._configure_bot_combo()
         self._configure_human_color_combo()
         self._configure_depth_spinbox()
-
-        new_game_button = QPushButton("Nowa gra")
-        new_game_button.clicked.connect(self._start_new_game)
-
-        back_button = QPushButton("Powrót do menu")
-        back_button.setObjectName("SecondaryButton")
-        back_button.clicked.connect(self._on_back_to_menu_clicked)
+        self._configure_buttons()
 
         self._status_label.setObjectName("StatusLabel")
         self._status_label.setWordWrap(True)
@@ -162,7 +182,13 @@ class GameScreen(QWidget):
         layout.addWidget(QLabel("Głębokość minimaxa"))
         layout.addWidget(self._depth_spinbox)
 
-        layout.addWidget(new_game_button)
+        layout.addWidget(self._new_game_button)
+        layout.addWidget(self._finish_game_button)
+        layout.addWidget(self._clear_game_button)
+
+        back_button = QPushButton("Powrót do menu")
+        back_button.setObjectName("SecondaryButton")
+        back_button.clicked.connect(self._on_back_to_menu_clicked)
         layout.addWidget(back_button)
 
         layout.addSpacing(10)
@@ -194,11 +220,14 @@ class GameScreen(QWidget):
         self._depth_spinbox.setMaximum(4)
         self._depth_spinbox.setValue(1)
 
-    def _initialize_default_board(self) -> None:
-        board = chess.Board()
-        self._board_widget.set_board(board)
-        self._board_widget.set_flipped(False)
-        self._fen_label.setText(board.fen())
+    def _configure_buttons(self) -> None:
+        self._new_game_button.clicked.connect(self._start_new_game)
+
+        self._finish_game_button.setObjectName("SecondaryButton")
+        self._finish_game_button.clicked.connect(self._finish_current_game)
+
+        self._clear_game_button.setObjectName("SecondaryButton")
+        self._clear_game_button.clicked.connect(self.prepare_for_new_game)
 
     def _start_new_game(self) -> None:
         self._clear_selection()
@@ -219,6 +248,10 @@ class GameScreen(QWidget):
             human_color=human_color,
         )
 
+        self._set_configuration_enabled(False)
+        self._finish_game_button.setEnabled(True)
+        self._clear_game_button.setEnabled(True)
+
         opening_bot_move = self._session.start()
 
         self._refresh_from_session()
@@ -230,7 +263,21 @@ class GameScreen(QWidget):
             )
 
         if self._session.is_game_over():
-            self._show_game_summary()
+            self._show_finished_game_summary()
+
+    def _finish_current_game(self) -> None:
+        """
+        Kończy aktualną sesję aplikacyjnie i przechodzi do podsumowania.
+
+        To nie oznacza mata ani remisu według reguł szachowych.
+        Wynik zostanie zapisany jako '*', jeśli partia nie była formalnie zakończona.
+        """
+        if self._session is None:
+            self._status_label.setText("Brak aktywnej partii do podsumowania.")
+            return
+
+        summary = self._session.get_current_game_summary()
+        self._on_game_finished(summary)
 
     def _on_board_square_clicked(self, square: int) -> None:
         if self._session is None:
@@ -348,7 +395,14 @@ class GameScreen(QWidget):
             )
 
         if result.is_game_over:
-            self._show_game_summary()
+            self._show_finished_game_summary()
+
+    def _show_finished_game_summary(self) -> None:
+        if self._session is None:
+            return
+
+        summary = self._session.get_game_summary()
+        self._on_game_finished(summary)
 
     def _refresh_from_session(self) -> None:
         if self._session is None:
@@ -384,9 +438,8 @@ class GameScreen(QWidget):
         self._selected_square = None
         self._board_widget.clear_highlights()
 
-    def _show_game_summary(self) -> None:
-        if self._session is None:
-            return
-
-        summary = self._session.get_game_summary()
-        self._on_game_finished(summary)
+    def _set_configuration_enabled(self, enabled: bool) -> None:
+        self._bot_combo.setEnabled(enabled)
+        self._human_color_combo.setEnabled(enabled)
+        self._depth_spinbox.setEnabled(enabled)
+        self._new_game_button.setEnabled(enabled)

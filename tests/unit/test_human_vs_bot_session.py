@@ -255,3 +255,36 @@ def test_game_summary_can_be_created_for_finished_game():
     assert summary.half_moves == 0
     assert summary.final_fen == session.get_fen()
     assert summary.move_history == ()
+
+    def test_current_game_summary_can_be_created_for_ongoing_game():
+        session = HumanVsBotSession(
+            bot=FirstLegalMoveBot(),
+            human_color=chess.WHITE,
+        )
+
+        session.start()
+        session.play_human_move_uci("e2e4")
+
+        summary = session.get_current_game_summary()
+
+        assert summary.result == "*"
+        assert summary.human_color == chess.WHITE
+        assert summary.bot_color == chess.BLACK
+        assert summary.bot_name == "FirstLegalMoveBot"
+        assert summary.half_moves == 2
+        assert len(summary.move_history) == 2
+        assert summary.final_fen == session.get_fen()
+
+    def test_current_game_summary_can_be_created_before_any_move():
+        session = HumanVsBotSession(
+            bot=FirstLegalMoveBot(),
+            human_color=chess.WHITE,
+        )
+
+        session.start()
+
+        summary = session.get_current_game_summary()
+
+        assert summary.result == "*"
+        assert summary.half_moves == 0
+        assert summary.move_history == ()

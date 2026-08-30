@@ -273,6 +273,15 @@ class HumanVsBotSession:
         if not self.is_game_over():
             raise RuntimeError("Cannot create game summary because the game is not over.")
 
+        return self.get_current_game_summary()
+
+    def get_current_game_summary(self) -> HumanVsBotGameSummary:
+        """
+        Tworzy podsumowanie aktualnego stanu partii.
+
+        W przeciwieństwie do get_game_summary() ta metoda działa także wtedy,
+        gdy partia nie została jeszcze zakończona.
+        """
         final_board = self._game.get_board_copy()
 
         return HumanVsBotGameSummary(
@@ -289,7 +298,6 @@ class HumanVsBotSession:
             ),
             move_history=tuple(self._moves),
         )
-
     def _parse_legal_human_move(self, move_uci: str) -> chess.Move:
         """
         Parsuje i sprawdza legalność ruchu człowieka.

@@ -15,7 +15,7 @@ class MainWindow(QMainWindow):
     Główne okno aplikacji AdaptiveChessAI.
 
     Odpowiada za przełączanie ekranów.
-    Logika gry będzie podpięta do osobnych widoków, nie bezpośrednio tutaj.
+    Logika gry jest obsługiwana przez GameScreen i HumanVsBotSession.
     """
 
     def __init__(self) -> None:
@@ -26,6 +26,8 @@ class MainWindow(QMainWindow):
 
         self._stack = QStackedWidget()
         self._screens: dict[ScreenName, int] = {}
+
+        self._game_screen: GameScreen | None = None
         self._game_summary_screen: GameSummaryScreen | None = None
 
         self._build_screens()
@@ -44,7 +46,7 @@ class MainWindow(QMainWindow):
 
     def show_game_summary(self, summary: HumanVsBotGameSummary) -> None:
         """
-        Pokazuje ekran podsumowania zakończonej partii.
+        Pokazuje ekran podsumowania partii.
         """
         if self._game_summary_screen is None:
             raise RuntimeError("Game summary screen is not initialized.")
@@ -52,22 +54,32 @@ class MainWindow(QMainWindow):
         self._game_summary_screen.set_summary(summary)
         self.show_screen(ScreenName.GAME_SUMMARY)
 
+    def start_new_game_flow(self) -> None:
+        """
+        Przygotowuje ekran gry do nowej partii i przełącza na niego widok.
+        """
+        if self._game_screen is None:
+            raise RuntimeError("Game screen is not initialized.")
+
+        self._game_screen.prepare_for_new_game()
+        self.show_screen(ScreenName.GAME)
+
     def _build_screens(self) -> None:
         menu_screen = MenuScreen(
-            on_play_clicked=lambda: self.show_screen(ScreenName.GAME),
+            on_play_clicked=self.start_new_game_flow,
             on_experiments_clicked=lambda: self.show_screen(ScreenName.EXPERIMENTS),
             on_results_clicked=lambda: self.show_screen(ScreenName.RESULTS),
             on_settings_clicked=lambda: self.show_screen(ScreenName.SETTINGS),
             on_exit_clicked=self.close,
         )
 
-        game_screen = GameScreen(
+        self._game_screen = GameScreen(
             on_back_to_menu_clicked=lambda: self.show_screen(ScreenName.MENU),
             on_game_finished=self.show_game_summary,
         )
 
         self._game_summary_screen = GameSummaryScreen(
-            on_play_again_clicked=lambda: self.show_screen(ScreenName.GAME),
+            on_play_again_clicked=self.start_new_game_flow,
             on_back_to_menu_clicked=lambda: self.show_screen(ScreenName.MENU),
         )
 
@@ -84,7 +96,7 @@ class MainWindow(QMainWindow):
         )
 
         self._add_screen(ScreenName.MENU, menu_screen)
-        self._add_screen(ScreenName.GAME, game_screen)
+        self._add_screen(ScreenName.GAME, self._game_screen)
         self._add_screen(ScreenName.GAME_SUMMARY, self._game_summary_screen)
         self._add_screen(ScreenName.EXPERIMENTS, experiments_screen)
         self._add_screen(ScreenName.RESULTS, results_screen)
