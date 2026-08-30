@@ -122,4 +122,9 @@ QLabel#BoardLegalTargetSquare {
     color: #101820;
     border: 2px solid #ffffff;
 }
+QLabel#SummaryResultLabel {
+    font-size: 24px;
+    font-weight: 700;
+    color: #ffffff;
+}
 """

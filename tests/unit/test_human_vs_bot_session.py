@@ -224,3 +224,34 @@ def test_session_notifies_bot_about_human_and_bot_moves():
 
     assert bot.observed[0] == ("e2e4", False)
     assert bot.observed[1][1] is True
+
+def test_game_summary_rejects_ongoing_game():
+    session = HumanVsBotSession(
+        bot=FirstLegalMoveBot(),
+        human_color=chess.WHITE,
+    )
+
+    session.start()
+
+    with pytest.raises(RuntimeError):
+        session.get_game_summary()
+
+
+def test_game_summary_can_be_created_for_finished_game():
+    session = HumanVsBotSession(
+        bot=FirstLegalMoveBot(),
+        human_color=chess.WHITE,
+        initial_fen="7k/6Q1/6K1/8/8/8/8/8 b - - 0 1",
+    )
+
+    session.start()
+
+    summary = session.get_game_summary()
+
+    assert summary.result == "1-0"
+    assert summary.human_color == chess.WHITE
+    assert summary.bot_color == chess.BLACK
+    assert summary.bot_name == "FirstLegalMoveBot"
+    assert summary.half_moves == 0
+    assert summary.final_fen == session.get_fen()
+    assert summary.move_history == ()

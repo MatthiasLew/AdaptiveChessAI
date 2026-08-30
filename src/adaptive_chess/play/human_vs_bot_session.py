@@ -5,6 +5,7 @@ import chess
 
 from adaptive_chess.bots.base_bot import BaseBot
 from adaptive_chess.core.game import Game
+from adaptive_chess.evaluation.material import calculate_material_balance
 
 
 class PlayerType(str, Enum):
@@ -42,6 +43,23 @@ class HumanMoveResult:
     is_game_over: bool
     result: str | None
     status_message: str
+
+
+@dataclass(frozen=True)
+class HumanVsBotGameSummary:
+    """
+    Podsumowanie zakończonej partii człowiek vs bot.
+    """
+
+    bot_name: str
+    human_color: chess.Color
+    bot_color: chess.Color
+    result: str
+    status_message: str
+    final_fen: str
+    half_moves: int
+    final_material_balance: int
+    move_history: tuple[PlayedMove, ...]
 
 
 class HumanVsBotSession:
@@ -149,6 +167,7 @@ class HumanVsBotSession:
             raise RuntimeError("It is not the human player's turn.")
 
         human_move = self._parse_legal_human_move(move_uci)
+
         played_human_move = self._push_move(
             player_type=PlayerType.HUMAN,
             move=human_move,
@@ -244,6 +263,33 @@ class HumanVsBotSession:
 
         return f"{turn} to move."
 
+    def get_game_summary(self) -> HumanVsBotGameSummary:
+        """
+        Tworzy podsumowanie zakończonej partii.
+
+        Raises:
+            RuntimeError: Jeśli partia jeszcze trwa.
+        """
+        if not self.is_game_over():
+            raise RuntimeError("Cannot create game summary because the game is not over.")
+
+        final_board = self._game.get_board_copy()
+
+        return HumanVsBotGameSummary(
+            bot_name=self._bot.name,
+            human_color=self._human_color,
+            bot_color=self._bot_color,
+            result=self.get_result() or "*",
+            status_message=self.get_status_message(),
+            final_fen=self.get_fen(),
+            half_moves=len(self._moves),
+            final_material_balance=calculate_material_balance(
+                final_board,
+                chess.WHITE,
+            ),
+            move_history=tuple(self._moves),
+        )
+
     def _parse_legal_human_move(self, move_uci: str) -> chess.Move:
         """
         Parsuje i sprawdza legalność ruchu człowieka.
@@ -286,9 +332,9 @@ class HumanVsBotSession:
         )
 
     def _push_move(
-            self,
-            player_type: PlayerType,
-            move: chess.Move,
+        self,
+        player_type: PlayerType,
+        move: chess.Move,
     ) -> PlayedMove:
         """
         Wykonuje ruch i zapisuje go w historii.

@@ -8,6 +8,7 @@ class ScreenName(str, Enum):
 
     MENU = "menu"
     GAME = "game"
+    GAME_SUMMARY = "game_summary"
     EXPERIMENTS = "experiments"
     RESULTS = "results"
     SETTINGS = "settings"

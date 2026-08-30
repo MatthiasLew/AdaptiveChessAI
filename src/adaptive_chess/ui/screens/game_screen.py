@@ -15,7 +15,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from adaptive_chess.play.human_vs_bot_session import HumanVsBotSession
+from adaptive_chess.play.human_vs_bot_session import (
+    HumanVsBotGameSummary,
+    HumanVsBotSession,
+)
 from adaptive_chess.ui.bot_factory import (
     BotKind,
     create_bot_for_gui,
@@ -41,16 +44,20 @@ class GameScreen(QWidget):
     - wykonanie ruchu człowieka,
     - odpowiedź bota,
     - historię ruchów,
-    - status gry.
+    - status gry,
+    - przejście do ekranu podsumowania po zakończeniu partii.
     """
 
     def __init__(
         self,
         on_back_to_menu_clicked: Callable[[], None],
+        on_game_finished: Callable[[HumanVsBotGameSummary], None],
     ) -> None:
         super().__init__()
 
         self._on_back_to_menu_clicked = on_back_to_menu_clicked
+        self._on_game_finished = on_game_finished
+
         self._session: HumanVsBotSession | None = None
         self._selected_square: chess.Square | None = None
 
@@ -145,19 +152,27 @@ class GameScreen(QWidget):
         history_title = QLabel("Historia ruchów")
 
         layout.addWidget(settings_title)
+
         layout.addWidget(QLabel("Bot"))
         layout.addWidget(self._bot_combo)
+
         layout.addWidget(QLabel("Kolor gracza"))
         layout.addWidget(self._human_color_combo)
+
         layout.addWidget(QLabel("Głębokość minimaxa"))
         layout.addWidget(self._depth_spinbox)
+
         layout.addWidget(new_game_button)
         layout.addWidget(back_button)
+
         layout.addSpacing(10)
+
         layout.addWidget(QLabel("Status"))
         layout.addWidget(self._status_label)
+
         layout.addWidget(fen_title)
         layout.addWidget(self._fen_label)
+
         layout.addWidget(history_title)
         layout.addWidget(self._history_list, stretch=1)
 
@@ -213,6 +228,9 @@ class GameScreen(QWidget):
                 f"Bot rozpoczął partię ruchem: "
                 f"{opening_bot_move.san} ({opening_bot_move.move_uci})"
             )
+
+        if self._session.is_game_over():
+            self._show_game_summary()
 
     def _on_board_square_clicked(self, square: int) -> None:
         if self._session is None:
@@ -329,6 +347,9 @@ class GameScreen(QWidget):
                 f"{result.status_message}"
             )
 
+        if result.is_game_over:
+            self._show_game_summary()
+
     def _refresh_from_session(self) -> None:
         if self._session is None:
             return
@@ -362,3 +383,10 @@ class GameScreen(QWidget):
     def _clear_selection(self) -> None:
         self._selected_square = None
         self._board_widget.clear_highlights()
+
+    def _show_game_summary(self) -> None:
+        if self._session is None:
+            return
+
+        summary = self._session.get_game_summary()
+        self._on_game_finished(summary)
