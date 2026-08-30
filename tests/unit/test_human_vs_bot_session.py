@@ -192,3 +192,35 @@ def test_session_with_random_bot_can_play_one_turn():
     assert result.human_move.move_uci == "e2e4"
     assert result.bot_move is not None
     assert len(session.get_move_history()) == 2
+
+class ObservingBot(BaseBot):
+    def __init__(self) -> None:
+        super().__init__("ObservingBot")
+        self.observed: list[tuple[str, bool]] = []
+
+    def choose_move(self, board: chess.Board) -> chess.Move:
+        return next(iter(board.legal_moves))
+
+    def observe_move(
+        self,
+        board_before_move: chess.Board,
+        move: chess.Move,
+        played_by: chess.Color,
+        is_own_move: bool,
+    ) -> None:
+        self.observed.append((move.uci(), is_own_move))
+
+
+def test_session_notifies_bot_about_human_and_bot_moves():
+    bot = ObservingBot()
+
+    session = HumanVsBotSession(
+        bot=bot,
+        human_color=chess.WHITE,
+    )
+
+    session.start()
+    session.play_human_move_uci("e2e4")
+
+    assert bot.observed[0] == ("e2e4", False)
+    assert bot.observed[1][1] is True

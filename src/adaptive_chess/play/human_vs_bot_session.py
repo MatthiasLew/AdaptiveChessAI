@@ -286,9 +286,9 @@ class HumanVsBotSession:
         )
 
     def _push_move(
-        self,
-        player_type: PlayerType,
-        move: chess.Move,
+            self,
+            player_type: PlayerType,
+            move: chess.Move,
     ) -> PlayedMove:
         """
         Wykonuje ruch i zapisuje go w historii.
@@ -298,6 +298,13 @@ class HumanVsBotSession:
         san = board_before_move.san(move)
 
         self._game.make_move(move)
+
+        self._bot.observe_move(
+            board_before_move=board_before_move.copy(stack=False),
+            move=move,
+            played_by=color,
+            is_own_move=color == self._bot_color,
+        )
 
         played_move = PlayedMove(
             player_type=player_type,

@@ -111,4 +111,15 @@ QLabel#FenLabel {
     color: #b8c7d9;
     font-size: 12px;
 }
+QLabel#BoardSelectedSquare {
+    background-color: #f2cc60;
+    color: #101820;
+    border: 2px solid #ffffff;
+}
+
+QLabel#BoardLegalTargetSquare {
+    background-color: #56d364;
+    color: #101820;
+    border: 2px solid #ffffff;
+}
 """

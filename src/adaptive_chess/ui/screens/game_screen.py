@@ -21,6 +21,10 @@ from adaptive_chess.ui.bot_factory import (
     create_bot_for_gui,
     parse_human_color,
 )
+from adaptive_chess.ui.move_builder import (
+    build_uci_move_from_clicks,
+    get_legal_target_squares,
+)
 from adaptive_chess.ui.widgets.chess_board_widget import ChessBoardWidget
 
 
@@ -28,10 +32,16 @@ class GameScreen(QWidget):
     """
     Ekran gry z botem.
 
-    Ten ekran posiada już układ pod właściwą rozgrywkę:
-    szachownicę, wybór bota, wybór koloru, depth, historię i status.
-
-    Klikanie pól zostanie dodane w kolejnym etapie.
+    Obsługuje:
+    - wybór bota,
+    - wybór koloru,
+    - wybór głębokości,
+    - start nowej gry,
+    - kliknięcia pól,
+    - wykonanie ruchu człowieka,
+    - odpowiedź bota,
+    - historię ruchów,
+    - status gry.
     """
 
     def __init__(
@@ -42,8 +52,10 @@ class GameScreen(QWidget):
 
         self._on_back_to_menu_clicked = on_back_to_menu_clicked
         self._session: HumanVsBotSession | None = None
+        self._selected_square: chess.Square | None = None
 
         self._board_widget = ChessBoardWidget()
+        self._board_widget.square_clicked.connect(self._on_board_square_clicked)
 
         self._bot_combo = QComboBox()
         self._human_color_combo = QComboBox()
@@ -89,8 +101,8 @@ class GameScreen(QWidget):
         layout.addWidget(self._board_widget, stretch=1)
 
         hint = QLabel(
-            "Ruchy kliknięciami zostaną dodane w następnym etapie. "
-            "Na razie ekran pokazuje konfigurację gry i aktualną planszę."
+            "Kliknij własną figurę, a potem pole docelowe. "
+            "Po ruchu człowieka bot odpowie automatycznie."
         )
         hint.setObjectName("SubtitleLabel")
         hint.setWordWrap(True)
@@ -174,6 +186,8 @@ class GameScreen(QWidget):
         self._fen_label.setText(board.fen())
 
     def _start_new_game(self) -> None:
+        self._clear_selection()
+
         bot_kind = self._bot_combo.currentData()
         human_color_name = self._human_color_combo.currentData()
         depth = self._depth_spinbox.value()
@@ -200,6 +214,121 @@ class GameScreen(QWidget):
                 f"{opening_bot_move.san} ({opening_bot_move.move_uci})"
             )
 
+    def _on_board_square_clicked(self, square: int) -> None:
+        if self._session is None:
+            self._status_label.setText("Najpierw kliknij „Nowa gra”.")
+            return
+
+        if self._session.is_game_over():
+            self._status_label.setText(self._session.get_status_message())
+            self._clear_selection()
+            return
+
+        board = self._session.get_board_copy()
+
+        if board.turn != self._session.human_color:
+            self._status_label.setText("To nie jest tura gracza.")
+            self._clear_selection()
+            return
+
+        clicked_square = chess.Square(square)
+
+        if self._selected_square is None:
+            self._select_square_if_valid(
+                board=board,
+                square=clicked_square,
+            )
+            return
+
+        if clicked_square == self._selected_square:
+            self._clear_selection()
+            self._status_label.setText("Anulowano wybór figury.")
+            return
+
+        clicked_piece = board.piece_at(clicked_square)
+
+        if clicked_piece is not None and clicked_piece.color == self._session.human_color:
+            self._select_square_if_valid(
+                board=board,
+                square=clicked_square,
+            )
+            return
+
+        self._try_play_selected_move(
+            board=board,
+            target_square=clicked_square,
+        )
+
+    def _select_square_if_valid(
+        self,
+        board: chess.Board,
+        square: chess.Square,
+    ) -> None:
+        if self._session is None:
+            return
+
+        piece = board.piece_at(square)
+
+        if piece is None:
+            self._status_label.setText("Kliknij własną figurę.")
+            return
+
+        if piece.color != self._session.human_color:
+            self._status_label.setText("To nie jest twoja figura.")
+            return
+
+        legal_targets = get_legal_target_squares(
+            board=board,
+            from_square=square,
+        )
+
+        if not legal_targets:
+            self._status_label.setText("Ta figura nie ma legalnych ruchów.")
+            return
+
+        self._selected_square = square
+        self._board_widget.set_selected_square(square)
+        self._board_widget.set_legal_target_squares(legal_targets)
+
+        square_name = chess.square_name(square)
+        self._status_label.setText(f"Wybrano figurę na polu {square_name}.")
+
+    def _try_play_selected_move(
+        self,
+        board: chess.Board,
+        target_square: chess.Square,
+    ) -> None:
+        if self._session is None or self._selected_square is None:
+            return
+
+        move_uci = build_uci_move_from_clicks(
+            board=board,
+            from_square=self._selected_square,
+            to_square=target_square,
+        )
+
+        try:
+            result = self._session.play_human_move_uci(move_uci)
+        except (RuntimeError, ValueError) as error:
+            self._status_label.setText(str(error))
+            self._clear_selection()
+            return
+
+        self._clear_selection()
+        self._refresh_from_session()
+
+        if result.bot_move is not None:
+            self._status_label.setText(
+                f"Twój ruch: {result.human_move.san}. "
+                f"Bot: {result.bot_move.san}. "
+                f"{result.status_message}"
+            )
+        else:
+            self._status_label.setText(
+                f"Twój ruch: {result.human_move.san}. "
+                f"{result.status_message}"
+            )
+
     def _refresh_from_session(self) -> None:
         if self._session is None:
             return
@@ -223,7 +352,13 @@ class GameScreen(QWidget):
 
         for index, move in enumerate(self._session.get_move_history(), start=1):
             color = "Białe" if move.color == chess.WHITE else "Czarne"
+            player = "gracz" if move.player_type.value == "human" else "bot"
+
             self._history_list.addItem(
-                f"{index:02d}. {color} {move.player_type.value}: "
+                f"{index:02d}. {color} {player}: "
                 f"{move.san} ({move.move_uci})"
             )
+
+    def _clear_selection(self) -> None:
+        self._selected_square = None
+        self._board_widget.clear_highlights()
