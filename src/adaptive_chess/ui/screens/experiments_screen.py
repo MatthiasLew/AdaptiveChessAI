@@ -55,6 +55,12 @@ class ExperimentsScreen(QWidget):
 
         self._build_ui()
 
+    def set_default_output_dir(self, output_dir: str) -> None:
+        """
+        Ustawia domyślny folder wyników eksperymentów.
+        """
+        self._output_dir_edit.setText(output_dir)
+
     def _build_ui(self) -> None:
         root_layout = QVBoxLayout()
         root_layout.setContentsMargins(30, 30, 30, 30)
@@ -148,6 +154,10 @@ class ExperimentsScreen(QWidget):
         self._experiment_combo.addItem(
             "Full suite",
             ExperimentKind.FULL_SUITE.value,
+        )
+        self._experiment_combo.addItem(
+            "RandomBot vs RandomBot",
+            ExperimentKind.RANDOM_VS_RANDOM.value,
         )
         self._experiment_combo.addItem(
             "RandomBot vs StaticMinimaxBot",
@@ -304,3 +314,6 @@ class ExperimentsScreen(QWidget):
             self._status_label.setText("Eksperyment jest uruchomiony.")
         else:
             self._cancel_button.setEnabled(False)
+
+        def set_default_output_dir(self, output_dir: str) -> None:
+            self._output_dir_edit.setText(output_dir)

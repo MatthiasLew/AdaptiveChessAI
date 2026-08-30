@@ -12,7 +12,7 @@ class ExperimentKind(str, Enum):
     RANDOM_VS_MINIMAX = "random_vs_minimax"
     RANDOM_VS_ADAPTIVE = "random_vs_adaptive"
     STATIC_VS_ADAPTIVE = "static_vs_adaptive"
-
+    RANDOM_VS_RANDOM = "random_vs_random"
 
 @dataclass(frozen=True)
 class ExperimentRunConfig:
@@ -93,6 +93,19 @@ def build_experiment_command(
             str(config.max_half_moves),
             "--depths",
             str(config.depth),
+        ]
+    if kind == ExperimentKind.RANDOM_VS_RANDOM:
+        return [
+            str(root / "scripts" / "run_random_series.py"),
+            "--matches",
+            str(config.matches),
+            "--max-half-moves",
+            str(config.max_half_moves),
+            "--output-csv",
+            str(
+                Path(config.output_dir)
+                / "random_vs_random_gui.csv"
+            ),
         ]
 
     if kind == ExperimentKind.RANDOM_VS_MINIMAX:

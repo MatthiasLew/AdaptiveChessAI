@@ -8,7 +8,10 @@ from adaptive_chess.ui.screens.game_summary_screen import GameSummaryScreen
 from adaptive_chess.ui.screens.menu_screen import MenuScreen
 from adaptive_chess.ui.screens.results_screen import ResultsScreen
 from adaptive_chess.ui.screens.settings_screen import SettingsScreen
-
+from adaptive_chess.ui.app_settings import (
+    AppSettings,
+    AppSettingsStore,
+)
 
 class MainWindow(QMainWindow):
     """
@@ -29,11 +32,26 @@ class MainWindow(QMainWindow):
 
         self._game_screen: GameScreen | None = None
         self._game_summary_screen: GameSummaryScreen | None = None
+        self._settings_store = AppSettingsStore()
+        self._experiments_screen: ExperimentsScreen | None = None
 
         self._build_screens()
 
         self.setCentralWidget(self._stack)
         self.show_screen(ScreenName.MENU)
+
+    def _apply_settings(self, settings: AppSettings) -> None:
+        if self._game_screen is not None:
+            self._game_screen.apply_defaults(
+                bot_kind=settings.default_bot,
+                human_color=settings.default_human_color,
+                depth=settings.default_depth,
+            )
+
+        if self._experiments_screen is not None:
+            self._experiments_screen.set_default_output_dir(
+                settings.default_experiment_output_dir
+            )
 
     def show_screen(self, screen_name: ScreenName) -> None:
         """
@@ -83,7 +101,7 @@ class MainWindow(QMainWindow):
             on_back_to_menu_clicked=lambda: self.show_screen(ScreenName.MENU),
         )
 
-        experiments_screen = ExperimentsScreen(
+        self._experiments_screen = ExperimentsScreen(
             on_back_to_menu_clicked=lambda: self.show_screen(ScreenName.MENU),
         )
 
@@ -92,15 +110,21 @@ class MainWindow(QMainWindow):
         )
 
         settings_screen = SettingsScreen(
+            settings_store=self._settings_store,
             on_back_to_menu_clicked=lambda: self.show_screen(ScreenName.MENU),
+            on_settings_saved=self._apply_settings,
         )
 
         self._add_screen(ScreenName.MENU, menu_screen)
         self._add_screen(ScreenName.GAME, self._game_screen)
         self._add_screen(ScreenName.GAME_SUMMARY, self._game_summary_screen)
-        self._add_screen(ScreenName.EXPERIMENTS, experiments_screen)
+        self._add_screen(
+            ScreenName.EXPERIMENTS,
+            self._experiments_screen,
+        )
         self._add_screen(ScreenName.RESULTS, results_screen)
         self._add_screen(ScreenName.SETTINGS, settings_screen)
+        self._apply_settings(self._settings_store.load())
 
     def _add_screen(
         self,

@@ -191,3 +191,29 @@ def test_resolve_output_dir_keeps_absolute_path(tmp_path):
     )
 
     assert resolved == absolute_path
+
+    def test_build_experiment_command_for_random_vs_random(tmp_path):
+        config = ExperimentRunConfig(
+            matches=2,
+            max_half_moves=20,
+            depth=1,
+            output_dir="results/gui",
+        )
+
+        command = build_experiment_command(
+            experiment_kind=ExperimentKind.RANDOM_VS_RANDOM,
+            config=config,
+            project_root=tmp_path,
+        )
+
+        assert command[0] == str(
+            tmp_path / "scripts" / "run_random_series.py"
+        )
+
+        assert "--output-csv" in command
+
+        output_csv = command[command.index("--output-csv") + 1]
+
+        assert Path(output_csv) == (
+                Path("results/gui") / "random_vs_random_gui.csv"
+        )

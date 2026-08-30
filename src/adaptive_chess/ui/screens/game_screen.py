@@ -48,6 +48,23 @@ class GameScreen(QWidget):
     - zakończenie i podsumowanie aktualnej partii.
     """
 
+    def apply_defaults(
+            self,
+            bot_kind: str,
+            human_color: str,
+            depth: int,
+    ) -> None:
+        bot_index = self._bot_combo.findData(bot_kind)
+
+        if bot_index >= 0:
+            self._bot_combo.setCurrentIndex(bot_index)
+
+        color_index = self._human_color_combo.findData(human_color)
+
+        if color_index >= 0:
+            self._human_color_combo.setCurrentIndex(color_index)
+
+        self._depth_spinbox.setValue(depth)
     def __init__(
         self,
         on_back_to_menu_clicked: Callable[[], None],
