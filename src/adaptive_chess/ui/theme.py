@@ -83,4 +83,32 @@ QPlainTextEdit {
     border-radius: 5px;
     color: #d0d7de;
 }
+QFrame#BoardFrame {
+    background-color: #0d1117;
+    border: 2px solid #30363d;
+    border-radius: 8px;
+}
+
+QLabel#BoardLightSquare {
+    background-color: #d6e0f0;
+    color: #101820;
+    border: none;
+}
+
+QLabel#BoardDarkSquare {
+    background-color: #59708a;
+    color: #101820;
+    border: none;
+}
+
+QLabel#StatusLabel {
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+QLabel#FenLabel {
+    color: #b8c7d9;
+    font-size: 12px;
+}
 """
