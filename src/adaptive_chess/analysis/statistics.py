@@ -3,7 +3,6 @@ from dataclasses import dataclass
 
 from adaptive_chess.experiments.match_runner import MatchResult
 
-
 VALID_RESULTS = {"1-0", "0-1", "1/2-1/2"}
 
 

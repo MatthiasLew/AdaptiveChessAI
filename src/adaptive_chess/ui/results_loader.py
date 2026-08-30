@@ -3,7 +3,6 @@ from pathlib import Path
 
 from adaptive_chess.ui.experiment_config import resolve_output_dir
 
-
 SUPPORTED_RESULT_EXTENSIONS = {
     ".csv": "CSV",
     ".json": "JSON",

@@ -1,6 +1,5 @@
 import chess
 
-
 PIECE_VALUES: dict[chess.PieceType, int] = {
     chess.PAWN: 1,
     chess.KNIGHT: 3,

@@ -1,7 +1,6 @@
 from collections.abc import Callable
 
 import chess
-
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
@@ -49,10 +48,10 @@ class GameScreen(QWidget):
     """
 
     def apply_defaults(
-            self,
-            bot_kind: str,
-            human_color: str,
-            depth: int,
+        self,
+        bot_kind: str,
+        human_color: str,
+        depth: int,
     ) -> None:
         bot_index = self._bot_combo.findData(bot_kind)
 
@@ -65,6 +64,7 @@ class GameScreen(QWidget):
             self._human_color_combo.setCurrentIndex(color_index)
 
         self._depth_spinbox.setValue(depth)
+
     def __init__(
         self,
         on_back_to_menu_clicked: Callable[[], None],
@@ -156,7 +156,7 @@ class GameScreen(QWidget):
         )
         hint.setObjectName("SubtitleLabel")
         hint.setWordWrap(True)
-        hint.setAlignment(Qt.AlignCenter)
+        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         layout.addWidget(hint)
         panel.setLayout(layout)
@@ -329,7 +329,10 @@ class GameScreen(QWidget):
 
         clicked_piece = board.piece_at(clicked_square)
 
-        if clicked_piece is not None and clicked_piece.color == self._session.human_color:
+        if (
+            clicked_piece is not None
+            and clicked_piece.color == self._session.human_color
+        ):
             self._select_square_if_valid(
                 board=board,
                 square=clicked_square,
@@ -407,8 +410,7 @@ class GameScreen(QWidget):
             )
         else:
             self._status_label.setText(
-                f"Twój ruch: {result.human_move.san}. "
-                f"{result.status_message}"
+                f"Twój ruch: {result.human_move.san}. {result.status_message}"
             )
 
         if result.is_game_over:
@@ -447,8 +449,7 @@ class GameScreen(QWidget):
             player = "gracz" if move.player_type.value == "human" else "bot"
 
             self._history_list.addItem(
-                f"{index:02d}. {color} {player}: "
-                f"{move.san} ({move.move_uci})"
+                f"{index:02d}. {color} {player}: {move.san} ({move.move_uci})"
             )
 
     def _clear_selection(self) -> None:

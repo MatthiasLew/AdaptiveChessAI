@@ -1,5 +1,5 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from scripts.check_experiment_readiness import (
     REQUIRED_DIRS,

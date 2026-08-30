@@ -1,5 +1,5 @@
-import pytest
 import chess
+import pytest
 
 from adaptive_chess.evaluation.position import CHECKMATE_SCORE
 from adaptive_chess.search.minimax import (
@@ -8,6 +8,7 @@ from adaptive_chess.search.minimax import (
     find_best_move_alpha_beta,
     minimax_score,
 )
+
 
 def test_minimax_score_at_depth_zero_uses_position_evaluation():
     board = chess.Board()
@@ -21,6 +22,8 @@ def test_minimax_score_at_depth_zero_uses_position_evaluation():
 
     assert white_score > 0.0
     assert black_score == pytest.approx(-white_score)
+
+
 def test_find_best_move_can_capture_free_queen():
     board = chess.Board("4k3/8/8/8/8/8/4q3/4K3 w - - 0 1")
 
@@ -77,6 +80,7 @@ def test_find_best_move_rejects_position_with_no_legal_moves():
 
     with pytest.raises(ValueError):
         find_best_move(board, depth=1, perspective=chess.BLACK)
+
 
 def test_alpha_beta_score_matches_minimax_score_at_depth_zero():
     board = chess.Board()

@@ -1,5 +1,5 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_PATH = PROJECT_ROOT / "src"
@@ -7,8 +7,8 @@ SRC_PATH = PROJECT_ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
-from adaptive_chess.bots.random_bot import RandomBot
-from adaptive_chess.experiments.match_runner import MatchRunner
+from adaptive_chess.bots.random_bot import RandomBot  # noqa: E402
+from adaptive_chess.experiments.match_runner import MatchRunner  # noqa: E402
 
 
 def main() -> None:

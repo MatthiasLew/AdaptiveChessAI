@@ -1,5 +1,5 @@
-import pytest
 import chess
+import pytest
 
 from adaptive_chess.evaluation.material import (
     calculate_material,

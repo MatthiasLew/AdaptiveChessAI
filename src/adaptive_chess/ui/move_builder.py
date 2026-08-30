@@ -73,7 +73,5 @@ def get_legal_target_squares(
     Zwraca pola docelowe legalnych ruchów z wybranego pola.
     """
     return tuple(
-        move.to_square
-        for move in board.legal_moves
-        if move.from_square == from_square
+        move.to_square for move in board.legal_moves if move.from_square == from_square
     )

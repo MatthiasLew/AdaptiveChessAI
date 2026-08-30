@@ -79,8 +79,7 @@ def test_build_experiment_metadata_includes_adaptive_profile_snapshots():
     profile_snapshots = [
         {
             "series_name": (
-                "StaticMinimaxBot-White-depth-1 "
-                "vs AdaptiveMinimaxBot-Black-depth-1"
+                "StaticMinimaxBot-White-depth-1 vs AdaptiveMinimaxBot-Black-depth-1"
             ),
             "adaptive_bot_color": "black",
             "opponent_bot": "StaticMinimaxBot",

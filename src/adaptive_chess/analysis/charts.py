@@ -9,7 +9,6 @@ import pandas as pd
 
 from adaptive_chess.analysis.csv_report import create_summary_table, load_results_csv
 
-
 REQUIRED_SUMMARY_COLUMNS = {
     "experiment_name",
     "total_matches",
@@ -44,7 +43,7 @@ def generate_experiment_charts(
     summary_table = create_summary_table(dataframe)
 
     if summary_table.empty:
-        return tuple()
+        return ()
 
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -166,9 +165,7 @@ def plot_move_limit_counts(
     """
     _validate_summary_table(summary_table)
 
-    plot_data = summary_table.set_index("experiment_name")[
-        "move_limit_reached_count"
-    ]
+    plot_data = summary_table.set_index("experiment_name")["move_limit_reached_count"]
 
     figure_width = max(8, len(summary_table) * 2.5)
 

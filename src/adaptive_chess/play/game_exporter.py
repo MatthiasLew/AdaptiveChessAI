@@ -12,7 +12,6 @@ from adaptive_chess.play.human_vs_bot_session import (
     PlayedMove,
 )
 
-
 GAME_SUMMARY_CSV_FIELDNAMES = [
     "bot_name",
     "human_color",

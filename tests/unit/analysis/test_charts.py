@@ -101,7 +101,7 @@ def test_generate_experiment_charts_returns_empty_tuple_for_empty_csv(tmp_path):
         output_dir=output_dir,
     )
 
-    assert chart_paths == tuple()
+    assert chart_paths == ()
 
 
 def test_plot_adjudicated_results_rejects_missing_columns(tmp_path):

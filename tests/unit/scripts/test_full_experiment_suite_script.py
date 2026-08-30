@@ -128,6 +128,7 @@ def test_build_analysis_commands_includes_reports_and_charts_by_default():
     assert "charts_static_vs_adaptive" in command_names
     assert "suite_summary" in command_names
 
+
 def test_build_analysis_commands_can_skip_reports():
     args = create_args(skip_reports=True)
 
@@ -137,6 +138,7 @@ def test_build_analysis_commands_can_skip_reports():
     assert all(not name.startswith("report_") for name in command_names)
     assert any(name.startswith("charts_") for name in command_names)
     assert "suite_summary" in command_names
+
 
 def test_build_analysis_commands_can_skip_charts():
     args = create_args(skip_charts=True)

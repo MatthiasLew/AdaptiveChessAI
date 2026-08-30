@@ -14,6 +14,7 @@ class ExperimentKind(str, Enum):
     STATIC_VS_ADAPTIVE = "static_vs_adaptive"
     RANDOM_VS_RANDOM = "random_vs_random"
 
+
 @dataclass(frozen=True)
 class ExperimentRunConfig:
     """
@@ -102,10 +103,7 @@ def build_experiment_command(
             "--max-half-moves",
             str(config.max_half_moves),
             "--output-csv",
-            str(
-                Path(config.output_dir)
-                / "random_vs_random_gui.csv"
-            ),
+            str(Path(config.output_dir) / "random_vs_random_gui.csv"),
         ]
 
     if kind == ExperimentKind.RANDOM_VS_MINIMAX:

@@ -1,7 +1,8 @@
 import json
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 
 def resolve_metadata_output_path(

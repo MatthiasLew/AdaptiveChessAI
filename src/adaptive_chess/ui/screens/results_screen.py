@@ -11,8 +11,8 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QPushButton,
     QPlainTextEdit,
+    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -191,9 +191,7 @@ class ResultsScreen(QWidget):
         self._preview.clear()
 
         if not summary.exists:
-            self._status_label.setText(
-                f"Folder nie istnieje: {summary.folder}"
-            )
+            self._status_label.setText(f"Folder nie istnieje: {summary.folder}")
             return
 
         for file_info in summary.files:
@@ -231,9 +229,7 @@ class ResultsScreen(QWidget):
 
         folder.mkdir(parents=True, exist_ok=True)
 
-        QDesktopServices.openUrl(
-            QUrl.fromLocalFile(str(folder.resolve()))
-        )
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder.resolve())))
 
     def _open_selected_file(self) -> None:
         file_info = self._get_selected_file_info()
@@ -242,9 +238,7 @@ class ResultsScreen(QWidget):
             self._status_label.setText("Nie wybrano pliku.")
             return
 
-        QDesktopServices.openUrl(
-            QUrl.fromLocalFile(str(file_info.path.resolve()))
-        )
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(file_info.path.resolve())))
 
     def _select_file(self, file_info: ResultFileInfo) -> None:
         for row in range(self._files_list.count()):

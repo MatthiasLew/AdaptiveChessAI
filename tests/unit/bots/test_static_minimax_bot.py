@@ -1,5 +1,5 @@
-import pytest
 import chess
+import pytest
 
 from adaptive_chess.bots.static_minimax_bot import StaticMinimaxBot
 
@@ -62,6 +62,7 @@ def test_static_minimax_bot_raises_error_when_no_legal_moves():
 
     with pytest.raises(ValueError):
         bot.choose_move(board)
+
 
 def test_static_minimax_bot_supports_depth_two():
     board = chess.Board()

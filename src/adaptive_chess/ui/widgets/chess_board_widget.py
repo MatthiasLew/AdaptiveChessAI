@@ -1,5 +1,4 @@
 import chess
-
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
@@ -7,7 +6,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QSizePolicy,
 )
-
 
 PIECE_UNICODE_SYMBOLS: dict[str, str] = {
     "P": "♙",
@@ -62,7 +60,7 @@ class BoardSquareLabel(QLabel):
     def __init__(self, square: chess.Square) -> None:
         super().__init__()
         self.square = square
-        self.setCursor(Qt.PointingHandCursor)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
 
     def mousePressEvent(self, event) -> None:
         self.clicked.emit(self.square)
@@ -90,7 +88,10 @@ class ChessBoardWidget(QFrame):
         self._square_labels: dict[chess.Square, BoardSquareLabel] = {}
 
         self.setObjectName("BoardFrame")
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding,
+        )
 
         self._layout = QGridLayout()
         self._layout.setSpacing(0)
@@ -134,9 +135,12 @@ class ChessBoardWidget(QFrame):
     def _build_squares(self) -> None:
         for square in chess.SQUARES:
             label = BoardSquareLabel(square)
-            label.setAlignment(Qt.AlignCenter)
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setMinimumSize(62, 62)
-            label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            label.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Expanding,
+            )
 
             font = label.font()
             font.setPointSize(28)
@@ -155,6 +159,9 @@ class ChessBoardWidget(QFrame):
     def _rebuild_squares(self) -> None:
         while self._layout.count():
             item = self._layout.takeAt(0)
+            if item is None:
+                continue
+
             widget = item.widget()
 
             if widget is not None:

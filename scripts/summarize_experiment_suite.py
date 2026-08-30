@@ -2,8 +2,6 @@ import argparse
 import csv
 from dataclasses import dataclass
 from pathlib import Path
-import sys
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -175,8 +173,7 @@ def summarize_experiment_group(
 
     half_moves = [_to_int(row["half_moves"], "half_moves") for row in rows]
     material_balances = [
-        _to_int(row["final_material_balance"], "final_material_balance")
-        for row in rows
+        _to_int(row["final_material_balance"], "final_material_balance") for row in rows
     ]
 
     move_limit_reached_count = sum(
@@ -255,7 +252,8 @@ def render_markdown_report(
         "",
         "## Tabela wyników",
         "",
-        "| CSV | Eksperyment | Partie | Formalne W-B-D | Techniczne W-B-D | Śr. półruchów | Śr. materiał białych | Limit |",
+        "| CSV | Eksperyment | Partie | Formalne W-B-D | Techniczne W-B-D | "
+        "Śr. półruchów | Śr. materiał białych | Limit |",
         "|---|---|---:|---:|---:|---:|---:|---:|",
     ]
 
@@ -265,8 +263,11 @@ def render_markdown_report(
             f"`{summary.csv_file}` | "
             f"{summary.experiment_name} | "
             f"{summary.total_matches} | "
-            f"{summary.formal_white_wins}-{summary.formal_black_wins}-{summary.formal_draws} | "
-            f"{summary.adjudicated_white_wins}-{summary.adjudicated_black_wins}-{summary.adjudicated_draws} | "
+            f"{summary.formal_white_wins}-{summary.formal_black_wins}-"
+            f"{summary.formal_draws} | "
+            f"{summary.adjudicated_white_wins}-"
+            f"{summary.adjudicated_black_wins}-"
+            f"{summary.adjudicated_draws} | "
             f"{summary.average_half_moves:.2f} | "
             f"{summary.average_final_material_balance:.2f} | "
             f"{summary.move_limit_reached_count} |"
@@ -277,16 +278,22 @@ def render_markdown_report(
             "",
             "## Jak czytać tabelę",
             "",
-            "- `Formalne W-B-D` oznacza formalne wyniki: wygrane białych, wygrane czarnych, remisy.",
+            "- `Formalne W-B-D` oznacza formalne wyniki: wygrane białych, "
+            "wygrane czarnych, remisy.",
             "- `Techniczne W-B-D` oznacza wyniki po adjudykacji materiałowej.",
-            "- `Śr. materiał białych` to średnia końcowa przewaga materialna z perspektywy białych.",
+            "- `Śr. materiał białych` to średnia końcowa przewaga materialna "
+            "z perspektywy białych.",
             "- `Limit` oznacza liczbę partii zakończonych przez limit półruchów.",
             "",
             "## Uwagi interpretacyjne",
             "",
-            "- Wynik formalny i techniczny mogą się różnić dla partii przerwanych limitem półruchów.",
-            "- Eksperymenty z botem adaptacyjnym należy interpretować razem z plikami `*.metadata.json`, ponieważ zawierają one profile przeciwnika.",
-            "- Mała liczba partii wystarcza do smoke testu, ale nie wystarcza do silnych wniosków badawczych.",
+            "- Wynik formalny i techniczny mogą się różnić dla partii "
+            "przerwanych limitem półruchów.",
+            "- Eksperymenty z botem adaptacyjnym należy interpretować razem "
+            "z plikami `*.metadata.json`, ponieważ zawierają one profile "
+            "przeciwnika.",
+            "- Mała liczba partii wystarcza do smoke testu, ale nie wystarcza "
+            "do silnych wniosków badawczych.",
             "",
         ]
     )

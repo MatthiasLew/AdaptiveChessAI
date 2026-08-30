@@ -1,5 +1,5 @@
-from collections.abc import Callable
 import sys
+from collections.abc import Callable
 
 from PySide6.QtCore import QProcess, QUrl
 from PySide6.QtGui import QDesktopServices
@@ -248,7 +248,7 @@ class ExperimentsScreen(QWidget):
         if self._process is None:
             return
 
-        output = bytes(self._process.readAllStandardOutput()).decode(
+        output = bytes(self._process.readAllStandardOutput().data()).decode(
             "utf-8",
             errors="replace",
         )
@@ -279,9 +279,7 @@ class ExperimentsScreen(QWidget):
         output_dir = resolve_output_dir(self._output_dir_edit.text())
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        QDesktopServices.openUrl(
-            QUrl.fromLocalFile(str(output_dir.resolve()))
-        )
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(output_dir.resolve())))
 
     def _read_config(self) -> ExperimentRunConfig:
         return ExperimentRunConfig(
@@ -314,6 +312,3 @@ class ExperimentsScreen(QWidget):
             self._status_label.setText("Eksperyment jest uruchomiony.")
         else:
             self._cancel_button.setEnabled(False)
-
-        def set_default_output_dir(self, output_dir: str) -> None:
-            self._output_dir_edit.setText(output_dir)

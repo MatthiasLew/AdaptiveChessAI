@@ -193,6 +193,7 @@ def test_session_with_random_bot_can_play_one_turn():
     assert result.bot_move is not None
     assert len(session.get_move_history()) == 2
 
+
 class ObservingBot(BaseBot):
     def __init__(self) -> None:
         super().__init__("ObservingBot")
@@ -224,6 +225,7 @@ def test_session_notifies_bot_about_human_and_bot_moves():
 
     assert bot.observed[0] == ("e2e4", False)
     assert bot.observed[1][1] is True
+
 
 def test_game_summary_rejects_ongoing_game():
     session = HumanVsBotSession(

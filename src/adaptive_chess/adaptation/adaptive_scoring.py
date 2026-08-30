@@ -3,7 +3,6 @@ import chess
 from adaptive_chess.adaptation.opponent_profile import OpponentMoveProfile
 from adaptive_chess.evaluation.position import calculate_center_control_balance
 
-
 CENTER_RESPONSE_THRESHOLD = 0.30
 CAPTURE_RESPONSE_THRESHOLD = 0.30
 CHECK_RESPONSE_THRESHOLD = 0.15
@@ -45,18 +44,19 @@ def calculate_adaptive_move_adjustment(
     adjustment = 0.0
 
     if opponent_profile.center_move_ratio >= CENTER_RESPONSE_THRESHOLD:
-        adjustment += (
-            CENTER_RESPONSE_WEIGHT
-            * calculate_center_control_balance(board_after_move, perspective)
+        adjustment += CENTER_RESPONSE_WEIGHT * calculate_center_control_balance(
+            board_after_move, perspective
         )
 
-    if opponent_profile.capture_ratio >= CAPTURE_RESPONSE_THRESHOLD:
-        if _moved_piece_is_protected(
+    if (
+        opponent_profile.capture_ratio >= CAPTURE_RESPONSE_THRESHOLD
+        and _moved_piece_is_protected(
             board_after_move=board_after_move,
             move=move,
             perspective=perspective,
-        ):
-            adjustment += PROTECTED_PIECE_BONUS
+        )
+    ):
+        adjustment += PROTECTED_PIECE_BONUS
 
     if opponent_profile.check_ratio >= CHECK_RESPONSE_THRESHOLD:
         opponent = not perspective

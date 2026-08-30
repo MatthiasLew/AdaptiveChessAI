@@ -116,6 +116,7 @@ def test_build_experiment_command_for_random_vs_minimax(tmp_path):
 
     assert Path(output_csv) == Path("results/gui") / "random_vs_minimax_gui.csv"
 
+
 def test_build_experiment_command_for_random_vs_adaptive(tmp_path):
     config = ExperimentRunConfig(
         matches=2,
@@ -137,6 +138,7 @@ def test_build_experiment_command_for_random_vs_adaptive(tmp_path):
 
     assert Path(output_csv) == Path("results/gui") / "random_vs_adaptive_gui.csv"
 
+
 def test_build_experiment_command_for_static_vs_adaptive(tmp_path):
     config = ExperimentRunConfig(
         matches=2,
@@ -157,6 +159,7 @@ def test_build_experiment_command_for_static_vs_adaptive(tmp_path):
     output_csv = command[command.index("--output-csv") + 1]
 
     assert Path(output_csv) == Path("results/gui") / "static_vs_adaptive_gui.csv"
+
 
 def test_build_experiment_command_rejects_unknown_experiment_kind():
     config = ExperimentRunConfig(
@@ -206,14 +209,10 @@ def test_resolve_output_dir_keeps_absolute_path(tmp_path):
             project_root=tmp_path,
         )
 
-        assert command[0] == str(
-            tmp_path / "scripts" / "run_random_series.py"
-        )
+        assert command[0] == str(tmp_path / "scripts" / "run_random_series.py")
 
         assert "--output-csv" in command
 
         output_csv = command[command.index("--output-csv") + 1]
 
-        assert Path(output_csv) == (
-                Path("results/gui") / "random_vs_random_gui.csv"
-        )
+        assert Path(output_csv) == (Path("results/gui") / "random_vs_random_gui.csv")

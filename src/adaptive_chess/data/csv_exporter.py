@@ -4,7 +4,6 @@ from pathlib import Path
 
 from adaptive_chess.experiments.match_runner import MatchResult
 
-
 MATCH_RESULT_FIELDNAMES = [
     "experiment_name",
     "match_index",

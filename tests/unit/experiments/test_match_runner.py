@@ -3,11 +3,11 @@ import pytest
 
 from adaptive_chess.bots.base_bot import BaseBot
 from adaptive_chess.bots.random_bot import RandomBot
+from adaptive_chess.evaluation.position import CHECKMATE_SCORE
 from adaptive_chess.experiments.match_runner import (
     MatchRunner,
     TerminationReason,
 )
-from adaptive_chess.evaluation.position import CHECKMATE_SCORE
 
 
 class ScriptedBot(BaseBot):
@@ -44,11 +44,11 @@ class RecordingScriptedBot(ScriptedBot):
         self.observations: list[tuple[str, chess.Color, bool]] = []
 
     def observe_move(
-            self,
-            board_before_move: chess.Board,
-            move: chess.Move,
-            played_by: chess.Color,
-            is_own_move: bool,
+        self,
+        board_before_move: chess.Board,
+        move: chess.Move,
+        played_by: chess.Color,
+        is_own_move: bool,
     ) -> None:
         self.observations.append((move.uci(), played_by, is_own_move))
 
@@ -161,6 +161,7 @@ def test_match_runner_adjudicates_move_limit_by_material_balance():
 def test_match_runner_rejects_invalid_adjudication_threshold():
     with pytest.raises(ValueError):
         MatchRunner(max_half_moves=1, adjudication_material_threshold=0)
+
 
 def test_match_runner_notifies_bots_about_observed_moves():
     white_bot = RecordingScriptedBot("WhiteRecordingBot", ["e2e4"])

@@ -14,7 +14,8 @@ def adjudicate_result_by_material(
 
     Args:
         final_material_balance: Końcowa przewaga materialna z perspektywy białych.
-        material_threshold: Minimalna przewaga materiałowa wymagana do przyznania wygranej.
+        material_threshold: Minimalna przewaga materiałowa wymagana
+                            do przyznania wygranej.
 
     Returns:
         "1-0", jeśli białe mają wystarczającą przewagę.

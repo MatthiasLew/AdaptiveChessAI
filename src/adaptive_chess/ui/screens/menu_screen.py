@@ -34,16 +34,16 @@ class MenuScreen(QWidget):
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout()
-        layout.setAlignment(Qt.AlignCenter)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setSpacing(14)
 
         title = QLabel("AdaptiveChessAI")
         title.setObjectName("TitleLabel")
-        title.setAlignment(Qt.AlignCenter)
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         subtitle = QLabel("Inteligentne szachy. Adaptacyjna nauka. Eksperymenty.")
         subtitle.setObjectName("SubtitleLabel")
-        subtitle.setAlignment(Qt.AlignCenter)
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         play_button = QPushButton("Graj z botem")
         experiments_button = QPushButton("Eksperymenty")
@@ -70,10 +70,11 @@ class MenuScreen(QWidget):
         layout.addWidget(title)
         layout.addWidget(subtitle)
         layout.addSpacing(22)
-        layout.addWidget(play_button, alignment=Qt.AlignCenter)
-        layout.addWidget(experiments_button, alignment=Qt.AlignCenter)
-        layout.addWidget(results_button, alignment=Qt.AlignCenter)
-        layout.addWidget(settings_button, alignment=Qt.AlignCenter)
-        layout.addWidget(exit_button, alignment=Qt.AlignCenter)
+        alignment = Qt.AlignmentFlag.AlignCenter
+        layout.addWidget(play_button, alignment=alignment)
+        layout.addWidget(experiments_button, alignment=alignment)
+        layout.addWidget(results_button, alignment=alignment)
+        layout.addWidget(settings_button, alignment=alignment)
+        layout.addWidget(exit_button, alignment=alignment)
 
         self.setLayout(layout)

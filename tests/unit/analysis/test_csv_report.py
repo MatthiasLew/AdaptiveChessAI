@@ -3,10 +3,10 @@ import csv
 import pytest
 
 from adaptive_chess.analysis.csv_report import (
+    analyze_results_csv,
     create_summary_table,
     load_results_csv,
     render_summary_report,
-    analyze_results_csv,
 )
 from adaptive_chess.data.csv_exporter import MATCH_RESULT_FIELDNAMES
 

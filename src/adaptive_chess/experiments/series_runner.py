@@ -18,7 +18,7 @@ class SeriesRunner:
         matches_count: int,
         max_half_moves: int = 200,
         initial_fen: str | None = None,
-        adjudication_material_threshold: int = 3
+        adjudication_material_threshold: int = 3,
     ) -> None:
         """
         Tworzy runner serii partii.
@@ -44,6 +44,7 @@ class SeriesRunner:
         self.max_half_moves = max_half_moves
         self.initial_fen = initial_fen
         self.adjudication_material_threshold = adjudication_material_threshold
+
     def play_series(
         self,
         white_bot_factory: Callable[[], BaseBot],

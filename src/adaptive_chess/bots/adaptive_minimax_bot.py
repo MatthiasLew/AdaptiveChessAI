@@ -7,7 +7,6 @@ from adaptive_chess.adaptation.opponent_profile import OpponentMoveProfile
 from adaptive_chess.bots.base_bot import BaseBot
 from adaptive_chess.search.minimax import alpha_beta_score
 
-
 ADAPTIVE_BOT_VERSION = "profile_adjusted_move_scoring_v1"
 
 

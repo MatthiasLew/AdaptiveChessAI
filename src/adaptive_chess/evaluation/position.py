@@ -2,7 +2,6 @@ import chess
 
 from adaptive_chess.evaluation.material import calculate_material_balance
 
-
 CHECKMATE_SCORE = 10_000
 POSITION_EVALUATION_VERSION = "material_mobility_center_v1"
 MATERIAL_WEIGHT = 1.0

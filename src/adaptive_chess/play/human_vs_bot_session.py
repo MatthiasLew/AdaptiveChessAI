@@ -271,7 +271,9 @@ class HumanVsBotSession:
             RuntimeError: Jeśli partia jeszcze trwa.
         """
         if not self.is_game_over():
-            raise RuntimeError("Cannot create game summary because the game is not over.")
+            raise RuntimeError(
+                "Cannot create game summary because the game is not over."
+            )
 
         return self.get_current_game_summary()
 
@@ -298,6 +300,7 @@ class HumanVsBotSession:
             ),
             move_history=tuple(self._moves),
         )
+
     def _parse_legal_human_move(self, move_uci: str) -> chess.Move:
         """
         Parsuje i sprawdza legalność ruchu człowieka.

@@ -2,7 +2,6 @@ from pathlib import Path
 
 import pandas as pd
 
-
 REQUIRED_MATCH_RESULT_COLUMNS = {
     "experiment_name",
     "match_index",
@@ -93,7 +92,7 @@ def create_summary_table(dataframe: pd.DataFrame) -> pd.DataFrame:
         rows.append(
             {
                 "experiment_name": experiment_name,
-                "total_matches": int(len(group)),
+                "total_matches": len(group),
                 "white_wins": result_counts["1-0"],
                 "black_wins": result_counts["0-1"],
                 "draws": result_counts["1/2-1/2"],

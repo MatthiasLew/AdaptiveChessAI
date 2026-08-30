@@ -69,6 +69,7 @@ coverage.xml
 # =========================
 .mypy_cache/
 .ruff_cache/
+.ai/
 .pyre/
 .pytype/
 .dmypy.json

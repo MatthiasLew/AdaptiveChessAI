@@ -3,11 +3,11 @@ from enum import Enum
 
 import chess
 
-from adaptive_chess.experiments.adjudication import adjudicate_result_by_material
 from adaptive_chess.bots.base_bot import BaseBot
 from adaptive_chess.core.game import Game
 from adaptive_chess.evaluation.material import calculate_material_balance
 from adaptive_chess.evaluation.position import evaluate_position
+from adaptive_chess.experiments.adjudication import adjudicate_result_by_material
 
 
 class TerminationReason(Enum):
@@ -56,8 +56,12 @@ class MatchRunner:
     Do obsługi planszy używa klasy Game, a do wyboru ruchów używa botów.
     """
 
-    def __init__(self, max_half_moves: int = 200, initial_fen: str | None = None,
-                 adjudication_material_threshold: int = 3, ) -> None:
+    def __init__(
+        self,
+        max_half_moves: int = 200,
+        initial_fen: str | None = None,
+        adjudication_material_threshold: int = 3,
+    ) -> None:
         """
         Tworzy runner do rozgrywania partii.
 
@@ -119,9 +123,7 @@ class MatchRunner:
             material_balances.append(
                 calculate_material_balance(current_board, chess.WHITE)
             )
-            position_scores.append(
-                evaluate_position(current_board, chess.WHITE)
-            )
+            position_scores.append(evaluate_position(current_board, chess.WHITE))
 
         reached_move_limit = not game.is_game_over()
 
@@ -137,9 +139,8 @@ class MatchRunner:
             )
         else:
             termination_reason = TerminationReason.RULES
-            result = game.get_result()
-            if result is None:
-                result = "1/2-1/2"
+            rules_result = game.get_result()
+            result = rules_result if rules_result is not None else "1/2-1/2"
 
             adjudicated_result = result
         return MatchResult(
@@ -159,22 +160,22 @@ class MatchRunner:
 
 
 def _notify_bots_about_move(
-        white_bot: BaseBot,
-        black_bot: BaseBot,
-        board_before_move: chess.Board,
-        move: chess.Move,
-        played_by: chess.Color,
+    white_bot: BaseBot,
+    black_bot: BaseBot,
+    board_before_move: chess.Board,
+    move: chess.Move,
+    played_by: chess.Color,
 ) -> None:
     """
-        Informuje oba boty o wykonanym ruchu.
+    Informuje oba boty o wykonanym ruchu.
 
-        Args:
-            white_bot: Bot grający białymi.
-            black_bot: Bot grający czarnymi.
-            board_before_move: Plansza przed wykonaniem ruchu.
-            move: Wykonany ruch.
-            played_by: Kolor, który wykonał ruch.
-        """
+    Args:
+        white_bot: Bot grający białymi.
+        black_bot: Bot grający czarnymi.
+        board_before_move: Plansza przed wykonaniem ruchu.
+        move: Wykonany ruch.
+        played_by: Kolor, który wykonał ruch.
+    """
     white_bot.observe_move(
         board_before_move=board_before_move.copy(stack=False),
         move=move,

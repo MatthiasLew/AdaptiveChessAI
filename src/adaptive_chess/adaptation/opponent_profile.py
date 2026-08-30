@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 import chess
 
-
 CENTER_SQUARES = {
     chess.D4,
     chess.E4,

@@ -2,7 +2,6 @@ from collections.abc import Callable
 from pathlib import Path
 
 import chess
-
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFrame,
@@ -21,7 +20,6 @@ from adaptive_chess.ui.summary_formatter import (
     describe_material_balance,
     describe_result,
 )
-
 
 DEFAULT_HUMAN_GAME_RESULTS_DIR = Path("results") / "human_games"
 
@@ -80,8 +78,7 @@ class GameSummaryScreen(QWidget):
             player = "gracz" if move.player_type.value == "human" else "bot"
 
             self._history_list.addItem(
-                f"{index:02d}. {color} {player}: "
-                f"{move.san} ({move.move_uci})"
+                f"{index:02d}. {color} {player}: {move.san} ({move.move_uci})"
             )
 
     def _build_ui(self) -> None:
@@ -134,7 +131,7 @@ class GameSummaryScreen(QWidget):
         content_layout.addWidget(self._history_list, 8, 0, 1, 2)
 
         buttons_layout = QVBoxLayout()
-        buttons_layout.setAlignment(Qt.AlignCenter)
+        buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         buttons_layout.setSpacing(10)
 
         save_button = QPushButton("Zapisz partię")
@@ -176,7 +173,5 @@ class GameSummaryScreen(QWidget):
             return
 
         self._save_status_label.setText(
-            "Zapisano partię:\n"
-            f"JSON: {json_path}\n"
-            f"CSV: {csv_path}"
+            f"Zapisano partię:\nJSON: {json_path}\nCSV: {csv_path}"
         )

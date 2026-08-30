@@ -165,7 +165,10 @@ def test_create_game_summary_file_stem_is_stable_with_datetime():
 
 
 def test_sanitize_file_part_removes_unsafe_characters():
-    assert sanitize_file_part("Static Minimax Bot depth=2!") == "static_minimax_bot_depth_2"
+    assert (
+        sanitize_file_part("Static Minimax Bot depth=2!")
+        == "static_minimax_bot_depth_2"
+    )
 
 
 def test_sanitize_file_part_returns_unknown_for_empty_text():

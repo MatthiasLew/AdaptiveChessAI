@@ -1,6 +1,10 @@
-from PySide6.QtWidgets import QMainWindow, QStackedWidget
+from PySide6.QtWidgets import QMainWindow, QStackedWidget, QWidget
 
 from adaptive_chess.play.human_vs_bot_session import HumanVsBotGameSummary
+from adaptive_chess.ui.app_settings import (
+    AppSettings,
+    AppSettingsStore,
+)
 from adaptive_chess.ui.navigation import ScreenName
 from adaptive_chess.ui.screens.experiments_screen import ExperimentsScreen
 from adaptive_chess.ui.screens.game_screen import GameScreen
@@ -8,10 +12,7 @@ from adaptive_chess.ui.screens.game_summary_screen import GameSummaryScreen
 from adaptive_chess.ui.screens.menu_screen import MenuScreen
 from adaptive_chess.ui.screens.results_screen import ResultsScreen
 from adaptive_chess.ui.screens.settings_screen import SettingsScreen
-from adaptive_chess.ui.app_settings import (
-    AppSettings,
-    AppSettingsStore,
-)
+
 
 class MainWindow(QMainWindow):
     """
@@ -88,7 +89,7 @@ class MainWindow(QMainWindow):
             on_experiments_clicked=lambda: self.show_screen(ScreenName.EXPERIMENTS),
             on_results_clicked=lambda: self.show_screen(ScreenName.RESULTS),
             on_settings_clicked=lambda: self.show_screen(ScreenName.SETTINGS),
-            on_exit_clicked=self.close,
+            on_exit_clicked=self._close_window,
         )
 
         self._game_screen = GameScreen(
@@ -126,10 +127,13 @@ class MainWindow(QMainWindow):
         self._add_screen(ScreenName.SETTINGS, settings_screen)
         self._apply_settings(self._settings_store.load())
 
+    def _close_window(self) -> None:
+        self.close()
+
     def _add_screen(
         self,
         screen_name: ScreenName,
-        widget,
+        widget: QWidget,
     ) -> None:
         index = self._stack.addWidget(widget)
         self._screens[screen_name] = index

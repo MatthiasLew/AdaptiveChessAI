@@ -58,9 +58,7 @@ class SettingsScreen(QWidget):
         )
 
         self._depth_spinbox.setValue(settings.default_depth)
-        self._experiment_output_edit.setText(
-            settings.default_experiment_output_dir
-        )
+        self._experiment_output_edit.setText(settings.default_experiment_output_dir)
 
     def _build_ui(self) -> None:
         root_layout = QVBoxLayout()
@@ -142,9 +140,7 @@ class SettingsScreen(QWidget):
         output_dir = self._experiment_output_edit.text().strip()
 
         if not output_dir:
-            self._status_label.setText(
-                "Folder eksperymentów nie może być pusty."
-            )
+            self._status_label.setText("Folder eksperymentów nie może być pusty.")
             return
 
         settings = AppSettings(
@@ -171,9 +167,7 @@ class SettingsScreen(QWidget):
             defaults.default_human_color,
         )
         self._depth_spinbox.setValue(defaults.default_depth)
-        self._experiment_output_edit.setText(
-            defaults.default_experiment_output_dir
-        )
+        self._experiment_output_edit.setText(defaults.default_experiment_output_dir)
 
         self._status_label.setText(
             "Przywrócono wartości domyślne. Kliknij „Zapisz ustawienia”."

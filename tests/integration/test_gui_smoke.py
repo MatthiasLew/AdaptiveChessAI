@@ -116,10 +116,7 @@ def test_saved_output_directory_is_applied_to_experiments_screen(
 
     assert experiments_screen is not None
 
-    assert (
-        experiments_screen._output_dir_edit.text()
-        == "results/gui_smoke_test"
-    )
+    assert experiments_screen._output_dir_edit.text() == "results/gui_smoke_test"
 
 
 def test_new_game_flow_opens_game_screen(main_window):
@@ -201,9 +198,7 @@ def test_unfinished_game_can_open_summary_screen(main_window):
 
     main_window.show_game_summary(summary)
 
-    expected_index = main_window._screens[
-        ScreenName.GAME_SUMMARY
-    ]
+    expected_index = main_window._screens[ScreenName.GAME_SUMMARY]
 
     assert main_window._stack.currentIndex() == expected_index
 

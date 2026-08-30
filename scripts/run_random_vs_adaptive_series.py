@@ -1,7 +1,6 @@
 import argparse
-from pathlib import Path
 import sys
-
+from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_PATH = PROJECT_ROOT / "src"
@@ -10,21 +9,23 @@ if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
 
-from adaptive_chess.adaptation.opponent_profile import OpponentMoveProfile
-from adaptive_chess.analysis.statistics import summarize_matches
-from adaptive_chess.bots.adaptive_minimax_bot import (
+from adaptive_chess.adaptation.opponent_profile import OpponentMoveProfile  # noqa: E402
+from adaptive_chess.analysis.statistics import summarize_matches  # noqa: E402
+from adaptive_chess.bots.adaptive_minimax_bot import (  # noqa: E402
     ADAPTIVE_BOT_VERSION,
     AdaptiveMinimaxBot,
 )
-from adaptive_chess.bots.random_bot import RandomBot
-from adaptive_chess.data.csv_exporter import export_match_series_collection_to_csv
-from adaptive_chess.evaluation.position import POSITION_EVALUATION_VERSION
-from adaptive_chess.experiments.match_runner import MatchResult
-from adaptive_chess.experiments.metadata import (
+from adaptive_chess.bots.random_bot import RandomBot  # noqa: E402
+from adaptive_chess.data.csv_exporter import (  # noqa: E402
+    export_match_series_collection_to_csv,
+)
+from adaptive_chess.evaluation.position import POSITION_EVALUATION_VERSION  # noqa: E402
+from adaptive_chess.experiments.match_runner import MatchResult  # noqa: E402
+from adaptive_chess.experiments.metadata import (  # noqa: E402
     resolve_metadata_output_path,
     write_experiment_metadata,
 )
-from adaptive_chess.experiments.series_runner import SeriesRunner
+from adaptive_chess.experiments.series_runner import SeriesRunner  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
@@ -346,7 +347,8 @@ def maybe_write_metadata(
 
 def main() -> None:
     """
-    Uruchamia eksperyment porównawczy dla jednej lub wielu głębokości bota adaptacyjnego.
+    Uruchamia eksperyment porównawczy dla jednej lub wielu głębokości
+    bota adaptacyjnego.
     """
     args = parse_args()
 
