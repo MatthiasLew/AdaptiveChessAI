@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from pathlib import Path
 
 import chess
 
@@ -13,12 +14,16 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from adaptive_chess.play.game_exporter import write_game_summary_exports
 from adaptive_chess.play.human_vs_bot_session import HumanVsBotGameSummary
 from adaptive_chess.ui.summary_formatter import (
     color_to_polish,
     describe_material_balance,
     describe_result,
 )
+
+
+DEFAULT_HUMAN_GAME_RESULTS_DIR = Path("results") / "human_games"
 
 
 class GameSummaryScreen(QWidget):
@@ -35,6 +40,7 @@ class GameSummaryScreen(QWidget):
 
         self._on_play_again_clicked = on_play_again_clicked
         self._on_back_to_menu_clicked = on_back_to_menu_clicked
+        self._summary: HumanVsBotGameSummary | None = None
 
         self._result_label = QLabel("Brak zakończonej partii.")
         self._status_label = QLabel("-")
@@ -43,6 +49,7 @@ class GameSummaryScreen(QWidget):
         self._half_moves_label = QLabel("-")
         self._material_label = QLabel("-")
         self._fen_label = QLabel("-")
+        self._save_status_label = QLabel("")
         self._history_list = QListWidget()
 
         self._build_ui()
@@ -51,6 +58,9 @@ class GameSummaryScreen(QWidget):
         """
         Ustawia dane zakończonej partii.
         """
+        self._summary = summary
+        self._save_status_label.setText("")
+
         self._result_label.setText(
             f"{summary.result} — {describe_result(summary.result)}"
         )
@@ -93,6 +103,8 @@ class GameSummaryScreen(QWidget):
         self._status_label.setWordWrap(True)
         self._fen_label.setWordWrap(True)
         self._fen_label.setObjectName("FenLabel")
+        self._save_status_label.setObjectName("SaveStatusLabel")
+        self._save_status_label.setWordWrap(True)
 
         content_layout.addWidget(QLabel("Wynik"), 0, 0)
         content_layout.addWidget(self._result_label, 0, 1)
@@ -125,6 +137,9 @@ class GameSummaryScreen(QWidget):
         buttons_layout.setAlignment(Qt.AlignCenter)
         buttons_layout.setSpacing(10)
 
+        save_button = QPushButton("Zapisz partię")
+        save_button.clicked.connect(self._save_summary)
+
         play_again_button = QPushButton("Graj ponownie")
         play_again_button.clicked.connect(self._on_play_again_clicked)
 
@@ -132,10 +147,12 @@ class GameSummaryScreen(QWidget):
         menu_button.setObjectName("SecondaryButton")
         menu_button.clicked.connect(self._on_back_to_menu_clicked)
 
+        buttons_layout.addWidget(save_button)
         buttons_layout.addWidget(play_again_button)
         buttons_layout.addWidget(menu_button)
 
         content_layout.addLayout(buttons_layout, 9, 0, 1, 2)
+        content_layout.addWidget(self._save_status_label, 10, 0, 1, 2)
 
         content_panel.setLayout(content_layout)
 
@@ -143,3 +160,23 @@ class GameSummaryScreen(QWidget):
         root_layout.addWidget(content_panel, stretch=1)
 
         self.setLayout(root_layout)
+
+    def _save_summary(self) -> None:
+        if self._summary is None:
+            self._save_status_label.setText("Brak partii do zapisania.")
+            return
+
+        try:
+            json_path, csv_path = write_game_summary_exports(
+                summary=self._summary,
+                output_dir=DEFAULT_HUMAN_GAME_RESULTS_DIR,
+            )
+        except OSError as error:
+            self._save_status_label.setText(f"Nie udało się zapisać partii: {error}")
+            return
+
+        self._save_status_label.setText(
+            "Zapisano partię:\n"
+            f"JSON: {json_path}\n"
+            f"CSV: {csv_path}"
+        )

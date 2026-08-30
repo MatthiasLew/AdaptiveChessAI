@@ -127,4 +127,8 @@ QLabel#SummaryResultLabel {
     font-weight: 700;
     color: #ffffff;
 }
+QLabel#SaveStatusLabel {
+    color: #56d364;
+    font-size: 12px;
+}
 """
