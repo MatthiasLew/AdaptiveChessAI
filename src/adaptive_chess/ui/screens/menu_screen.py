@@ -21,6 +21,7 @@ class MenuScreen(QWidget):
         on_results_clicked: Callable[[], None],
         on_settings_clicked: Callable[[], None],
         on_exit_clicked: Callable[[], None],
+        on_campaign_clicked: Callable[[], None] | None = None,
     ) -> None:
         super().__init__()
 
@@ -29,6 +30,7 @@ class MenuScreen(QWidget):
         self._on_results_clicked = on_results_clicked
         self._on_settings_clicked = on_settings_clicked
         self._on_exit_clicked = on_exit_clicked
+        self._on_campaign_clicked = on_campaign_clicked
 
         self._build_ui()
 
@@ -71,6 +73,11 @@ class MenuScreen(QWidget):
         layout.addWidget(subtitle)
         layout.addSpacing(22)
         alignment = Qt.AlignmentFlag.AlignCenter
+        if self._on_campaign_clicked is not None:
+            campaign_button = QPushButton("Kampania badawcza")
+            campaign_button.setFixedWidth(280)
+            campaign_button.clicked.connect(self._on_campaign_clicked)
+            layout.addWidget(campaign_button, alignment=alignment)
         layout.addWidget(play_button, alignment=alignment)
         layout.addWidget(experiments_button, alignment=alignment)
         layout.addWidget(results_button, alignment=alignment)

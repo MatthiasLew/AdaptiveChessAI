@@ -3,7 +3,7 @@ import chess
 from adaptive_chess.evaluation.material import calculate_material_balance
 
 CHECKMATE_SCORE = 10_000
-POSITION_EVALUATION_VERSION = "material_mobility_center_v1"
+POSITION_EVALUATION_VERSION = "material_mobility_center_terminal_draws_v2"
 MATERIAL_WEIGHT = 1.0
 MOBILITY_WEIGHT = 0.05
 CENTER_CONTROL_WEIGHT = 0.25
@@ -49,7 +49,7 @@ def evaluate_position(
 
         return CHECKMATE_SCORE
 
-    if board.is_stalemate() or board.is_insufficient_material():
+    if board.is_game_over():
         return 0.0
 
     material_score = calculate_material_balance(board, perspective)

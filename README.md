@@ -1,188 +1,50 @@
 # AdaptiveChessAI
 
-AdaptiveChessAI to projekt pracy inżynierskiej dotyczący platformy do analizy skuteczności botów szachowych, w tym botów adaptacyjnych uczących się wybranych cech stylu przeciwnika.
+Aplikacja desktopowa PySide6 do badania adaptacji agentów szachowych na podstawie partii z graczem nieeksperckim. Projekt pracy inżynierskiej.
 
-Aktualny stan projektu obejmuje przede wszystkim backend badawczy, mechanikę rozgrywania partii, boty, eksperymenty, eksport wyników oraz analizę danych.
+## Uruchomienie
 
-Projekt nie posiada jeszcze właściwego GUI i nie umożliwia jeszcze wygodnej gry człowieka z botami w aplikacji okienkowej.
-
----
-
-## Aktualny status
-
-```text
-Backend badawczy: działa
-Mechanika botów: działa
-Eksperymenty bot vs bot: działają
-Eksport CSV/JSON: działa
-Raporty i wykresy: działają
-GUI: brak
-Tryb człowiek vs bot: brak
-Aplikacyjne MVP: niedomknięte
-```
-
-Szczegółowy status projektu znajduje się w:
-
-```text
-docs/mvp_status.md
-```
-
-Plan dalszych prac nad GUI znajduje się w:
-
-```text
-docs/gui_roadmap.md
-```
-
----
-
-## Co obecnie działa
-
-Projekt zawiera:
-
-- obsługę partii szachowej przez `python-chess`,
-- bazową klasę botów,
-- `RandomBot`,
-- `StaticMinimaxBot`,
-- `AdaptiveMinimaxBot`,
-- minimax,
-- alfa-beta pruning,
-- funkcję oceny pozycji,
-- profil przeciwnika dla bota adaptacyjnego,
-- rozgrywanie pojedynczych partii,
-- rozgrywanie serii partii,
-- eksperymenty bot vs bot,
-- eksport wyników do CSV,
-- eksport metadanych do JSON,
-- raporty tekstowe,
-- wykresy PNG,
-- zbiorcze podsumowanie eksperymentów.
-
----
-
-## Czego jeszcze brakuje
-
-Najważniejsze brakujące elementy:
-
-- GUI,
-- widok szachownicy,
-- klikanie figur,
-- tryb człowiek vs bot,
-- wybór bota w aplikacji,
-- wybór koloru gracza,
-- historia ruchów w GUI,
-- komunikaty o szachu, macie i remisie,
-- reset partii z poziomu aplikacji,
-- zapis partii użytkownika,
-- wykorzystanie danych z partii użytkownika w analizie.
-
----
-
-## Instalacja zależności
+W katalogu repozytorium, na Windows (zweryfikowano Python 3.13):
 
 ```powershell
-pip install -r requirements.txt
+python -m venv venv
+.\venv\Scripts\python.exe -m pip install -r requirements.txt
+.\venv\Scripts\python.exe scripts/run_gui.py
 ```
 
----
+## Kampania badawcza
+
+W menu wybierz **Kampania badawcza**. Utwórz plik kampanii, podaj pseudonim, liczbę partii na agenta i głębokość. Przycisk **Rozpocznij / wznów partię** prowadzi przez naprzemienne gry z AdaptiveMinimax i StaticMinimax. Kolory zmieniają się co rundę. Static jest kontrolą i nie uczy się.
+
+Każdy ruch zapisuje się automatycznie w SQLite. Po ponownym uruchomieniu wczytaj ten sam plik kampanii i wznów partię. Po zakończeniu treningu uruchom turniej: Static, Adaptive przed treningiem i Adaptive po treningu. Modele w turnieju nie uczą się. Raport Markdown, tabela CSV, dane JSON i partie PGN zapisują się obok pliku kampanii.
+
+[Instrukcja kampanii](docs/campaign.md) · [Lista dalszych prac](docs/TODO.md) · [Architektura](docs/architecture.md)
+
+## Aktualny zakres
+
+- GUI z grą swobodną, kampanią, eksperymentami, wynikami i ustawieniami.
+- Reguły python-chess, RandomBot, StaticMinimaxBot i AdaptiveMinimaxBot.
+- Trwały profil przeciwnika **w kampanii**, checkpoint po każdej ukończonej partii Adaptive.
+- W kampanii: ruch bota w tle, promocja, poddanie, automatyczny zapis i wznowienie.
+- Turniej 18 partii na trzech otwarciach, ze zmianą kolorów i zapisem po każdej partii.
+- Dotychczasowe skrypty bot–bot, CSV/JSON, statystyki i wykresy.
+
+Gra swobodna oraz starsze skrypty eksperymentów pozostają oddzielnymi trybami; nie trenują zapisanych agentów kampanii. Metody imitacji i TD oraz krzywe uczenia są w planie. Obecny adaptive to adaptacja heurystyczna, nie model neuronowy.
 
 ## Testy
 
 ```powershell
-python -m pytest
+$env:QT_QPA_PLATFORM = "offscreen"
+.\venv\Scripts\python.exe -m pytest
 ```
 
----
+Narzędzia jakości: `ruff check .` i `mypy src scripts tests` po zainstalowaniu Ruff/mypy w środowisku narzędzi deweloperskich.
 
-## Eksperymenty
-
-Projekt zawiera skrypty do uruchamiania eksperymentów porównujących boty szachowe:
-
-- `RandomBot`,
-- `StaticMinimaxBot`,
-- `AdaptiveMinimaxBot`.
-
-Podstawowy zestaw eksperymentów backendowych można uruchomić komendą:
+## Eksperymenty skryptowe
 
 ```powershell
-python scripts/run_full_experiment_suite.py --output-dir results/full_suite_v1 --matches 10 --max-half-moves 80 --depths 1
+.\venv\Scripts\python.exe scripts/run_full_experiment_suite.py --output-dir results/smoke --matches 2 --max-half-moves 20 --depths 1
+.\venv\Scripts\python.exe scripts/run_campaign_tournament.py data/campaigns/moje_badanie.sqlite3
 ```
 
-Skrypt generuje:
-
-- pliki CSV z wynikami partii,
-- pliki metadanych JSON,
-- raporty tekstowe,
-- wykresy PNG,
-- zbiorcze podsumowanie Markdown.
-
-Szczegółowy opis uruchamiania eksperymentów znajduje się w:
-
-```text
-docs/experiments.md
-```
-
----
-
-## Kierunek dalszego rozwoju
-
-Najbliższy właściwy kierunek prac to GUI oraz możliwość gry człowieka z botami.
-
-Planowana kolejność:
-
-1. `HumanVsBotSession` bez GUI.
-2. Terminalowy test człowiek vs bot.
-3. Dodanie zależności GUI.
-4. Podstawowe okno aplikacji.
-5. Widok szachownicy.
-6. Klikanie figur.
-7. Ruch bota po ruchu gracza.
-8. Wybór bota, koloru i głębokości.
-9. Historia ruchów i status gry.
-10. Zapis partii użytkownika.
-
----
-
-## Decyzja projektowa
-
-Aktualnie projekt nie powinien być opisywany jako domknięta aplikacja.
-
-Poprawna interpretacja:
-
-```text
-Projekt ma gotowy mechaniczny fundament badawczy.
-Projekt nie ma jeszcze kompletnego MVP aplikacyjnego.
-Następna faza to GUI i tryb człowiek vs bot.
-```
-
-## Tryb człowiek vs bot bez GUI
-
-Projekt posiada już warstwę sesji człowiek vs bot, ale nadal nie posiada GUI.
-
-Terminalowy smoke test:
-
-```powershell
-python scripts/play_human_vs_bot_terminal.py --bot random --human-color white
-```
-
-Dokumentacja:
-
-```text
-docs/human_vs_bot.md
-```
-
-## Koncepcja GUI
-
-Zatwierdzona koncepcja GUI znajduje się w:
-
-```text
-docs/gui_concept.md
-```
-
-Aplikacja ma być wieloekranowa:
-
-- menu główne,
-- gra z botem,
-- podsumowanie partii,
-- eksperymenty,
-- log eksperymentu,
-- wyniki i raporty.
+Starszy pipeline opisuje [dokumentacja eksperymentów](docs/experiments.md). Jego techniczne remisy i adjudykacja nie są protokołem nowej kampanii. Mała seria testowa nie stanowi dowodu skuteczności uczenia.

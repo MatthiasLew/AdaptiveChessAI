@@ -6,6 +6,7 @@ from adaptive_chess.ui.app_settings import (
     AppSettingsStore,
 )
 from adaptive_chess.ui.navigation import ScreenName
+from adaptive_chess.ui.screens.campaign_screen import CampaignScreen
 from adaptive_chess.ui.screens.experiments_screen import ExperimentsScreen
 from adaptive_chess.ui.screens.game_screen import GameScreen
 from adaptive_chess.ui.screens.game_summary_screen import GameSummaryScreen
@@ -90,6 +91,7 @@ class MainWindow(QMainWindow):
             on_results_clicked=lambda: self.show_screen(ScreenName.RESULTS),
             on_settings_clicked=lambda: self.show_screen(ScreenName.SETTINGS),
             on_exit_clicked=self._close_window,
+            on_campaign_clicked=lambda: self.show_screen(ScreenName.CAMPAIGN),
         )
 
         self._game_screen = GameScreen(
@@ -125,7 +127,18 @@ class MainWindow(QMainWindow):
         )
         self._add_screen(ScreenName.RESULTS, results_screen)
         self._add_screen(ScreenName.SETTINGS, settings_screen)
+        self._campaign_screen = CampaignScreen(
+            on_back=lambda: self.show_screen(ScreenName.MENU))
+        self._add_screen(ScreenName.CAMPAIGN, self._campaign_screen)
         self._apply_settings(self._settings_store.load())
+
+    def closeEvent(self, event) -> None:
+        if self._campaign_screen.thinking:
+            self.statusBar().showMessage("Poczekaj na zakończenie ruchu i zapisu.")
+            event.ignore()
+            return
+        self._campaign_screen.stop_tournament()
+        super().closeEvent(event)
 
     def _close_window(self) -> None:
         self.close()

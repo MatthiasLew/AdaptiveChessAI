@@ -1,4 +1,9 @@
 DARK_THEME_STYLESHEET = """
+QLabel#BoardLightSquare, QLabel#BoardDarkSquare,
+QLabel#BoardSelectedSquare, QLabel#BoardLegalTargetSquare {
+    font-family: "Segoe UI Symbol";
+    font-size: 38px;
+}
 QMainWindow {
     background-color: #101820;
 }

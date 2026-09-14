@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 import chess
@@ -26,6 +27,20 @@ class OpponentMoveProfile:
     captures: int = 0
     checks: int = 0
     center_moves: int = 0
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, object]) -> "OpponentMoveProfile":
+        """Load validated counters; derived ratios are never trusted."""
+        values = {}
+        for key in ("observed_moves", "captures", "checks", "center_moves"):
+            value = data.get(key)
+            if type(value) is not int or value < 0:
+                raise ValueError(f"Invalid profile counter: {key}")
+            values[key] = value
+        if any(values[k] > values["observed_moves"]
+               for k in ("captures", "checks", "center_moves")):
+            raise ValueError("Profile counters exceed observed moves.")
+        return cls(**values)
 
     def observe_move(
         self,

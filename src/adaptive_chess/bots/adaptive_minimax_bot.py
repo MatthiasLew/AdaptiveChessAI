@@ -7,7 +7,7 @@ from adaptive_chess.adaptation.opponent_profile import OpponentMoveProfile
 from adaptive_chess.bots.base_bot import BaseBot
 from adaptive_chess.search.minimax import alpha_beta_score
 
-ADAPTIVE_BOT_VERSION = "profile_adjusted_move_scoring_v1"
+ADAPTIVE_BOT_VERSION = "profile_adjusted_move_scoring_terminal_v2"
 
 
 class AdaptiveMinimaxBot(BaseBot):
@@ -26,6 +26,7 @@ class AdaptiveMinimaxBot(BaseBot):
         name: str = "AdaptiveMinimaxBot",
         depth: int = 1,
         opponent_profile: OpponentMoveProfile | None = None,
+        training: bool = True,
     ) -> None:
         """
         Tworzy adaptacyjnego bota minimaxowego.
@@ -43,6 +44,7 @@ class AdaptiveMinimaxBot(BaseBot):
 
         super().__init__(name)
         self.depth = depth
+        self.training = training
         self.opponent_profile = (
             opponent_profile if opponent_profile is not None else OpponentMoveProfile()
         )
@@ -111,7 +113,7 @@ class AdaptiveMinimaxBot(BaseBot):
             played_by: Kolor, który wykonał ruch.
             is_own_move: True, jeśli ruch wykonał ten bot.
         """
-        if is_own_move:
+        if is_own_move or not self.training:
             return
 
         self.opponent_profile.observe_move(

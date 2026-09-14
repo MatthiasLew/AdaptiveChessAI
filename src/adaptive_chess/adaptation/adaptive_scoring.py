@@ -41,6 +41,9 @@ def calculate_adaptive_move_adjustment(
     if perspective not in (chess.WHITE, chess.BLACK):
         raise ValueError("perspective must be chess.WHITE or chess.BLACK.")
 
+    if board_after_move.is_game_over():
+        return 0.0
+
     adjustment = 0.0
 
     if opponent_profile.center_move_ratio >= CENTER_RESPONSE_THRESHOLD:

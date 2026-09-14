@@ -12,3 +12,4 @@ class ScreenName(str, Enum):
     EXPERIMENTS = "experiments"
     RESULTS = "results"
     SETTINGS = "settings"
+    CAMPAIGN = "campaign"

@@ -1,3 +1,4 @@
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from enum import Enum
 
@@ -76,6 +77,7 @@ class HumanVsBotSession:
         bot: BaseBot,
         human_color: chess.Color = chess.WHITE,
         initial_fen: str | None = None,
+        on_move: Callable[["HumanVsBotSession"], None] | None = None,
     ) -> None:
         """
         Tworzy sesję człowiek vs bot.
@@ -97,6 +99,33 @@ class HumanVsBotSession:
         self._bot_color = not human_color
         self._moves: list[PlayedMove] = []
         self._started = False
+        self._on_move = on_move
+
+    def restore_moves(self, moves: Sequence[str]) -> None:
+        """Replay a saved game against its pre-game bot state, without inference."""
+        if self._started or self._moves:
+            raise RuntimeError("Restore requires a fresh session.")
+        callback = self._on_move
+        self._on_move = None
+        try:
+            for uci in moves:
+                if self.is_game_over():
+                    raise ValueError("Saved moves continue after game over.")
+                move = chess.Move.from_uci(uci)
+                player = (PlayerType.HUMAN if self.get_turn() == self.human_color
+                          else PlayerType.BOT)
+                self._push_move(player, move)
+        finally:
+            self._on_move = callback
+        self._started = True
+
+    def continue_bot_turn(self) -> PlayedMove | None:
+        """Recover a game saved after the human move but before the bot reply."""
+        if not self._started:
+            raise RuntimeError("Session must be started.")
+        if not self.is_game_over() and self.get_turn() == self.bot_color:
+            return self._play_bot_move()
+        return None
 
     @property
     def human_color(self) -> chess.Color:
@@ -371,5 +400,8 @@ class HumanVsBotSession:
         )
 
         self._moves.append(played_move)
+
+        if self._on_move is not None:
+            self._on_move(self)
 
         return played_move

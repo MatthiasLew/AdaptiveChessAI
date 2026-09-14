@@ -136,7 +136,7 @@ class ChessBoardWidget(QFrame):
         for square in chess.SQUARES:
             label = BoardSquareLabel(square)
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            label.setMinimumSize(62, 62)
+            label.setMinimumSize(48, 48)
             label.setSizePolicy(
                 QSizePolicy.Policy.Expanding,
                 QSizePolicy.Policy.Expanding,
@@ -155,6 +155,19 @@ class ChessBoardWidget(QFrame):
 
             self._layout.addWidget(label, row, column)
             self._square_labels[square] = label
+
+        for index in range(8):
+            file_index = 7 - index if self._flipped else index
+            rank = index + 1 if self._flipped else 8 - index
+            file_label = QLabel(chess.FILE_NAMES[file_index])
+            rank_label = QLabel(str(rank))
+            for coordinate in (file_label, rank_label):
+                coordinate.setObjectName("BoardCoordinate")
+                coordinate.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            file_label.setFixedHeight(20)
+            rank_label.setFixedWidth(20)
+            self._layout.addWidget(file_label, 8, index)
+            self._layout.addWidget(rank_label, index, 8)
 
     def _rebuild_squares(self) -> None:
         while self._layout.count():
