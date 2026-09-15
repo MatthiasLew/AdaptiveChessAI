@@ -12,17 +12,26 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QProgressBar,
     QPushButton,
     QTextBrowser,
     QVBoxLayout,
     QWidget,
 )
 
+from adaptive_chess.ui.help_text import help_for
 from adaptive_chess.ui.i18n import tr
 from adaptive_chess.ui.results_loader import (
     ResultFileInfo,
     read_text_preview,
     summarize_results_folder,
+)
+from adaptive_chess.ui.widgets.components import (
+    Disclosure,
+    ResponsiveColumns,
+    SectionCard,
+    StatCard,
+    label,
 )
 
 
@@ -47,6 +56,8 @@ class ResultsScreen(QWidget):
         self._status_label = QLabel("Wybierz folder wyników i kliknij „Wczytaj”.")
         self._files_list = QListWidget()
         self._preview = QTextBrowser()
+        self._overview = QTextBrowser()
+        self._overview.setMinimumHeight(240)
         self._technical = QCheckBox("Pokaż pliki techniczne")
         self._technical.toggled.connect(self._load_results_folder)
 
@@ -62,23 +73,42 @@ class ResultsScreen(QWidget):
         root_layout.setContentsMargins(30, 30, 30, 30)
         root_layout.setSpacing(16)
 
-        title = QLabel("Wyniki i raporty")
-        title.setObjectName("SectionTitle")
-
-        top_panel = self._build_top_panel()
-
-        content_layout = QHBoxLayout()
-        content_layout.setSpacing(18)
-
-        files_panel = self._build_files_panel()
-        preview_panel = self._build_preview_panel()
-
-        content_layout.addWidget(files_panel, stretch=1)
-        content_layout.addWidget(preview_panel, stretch=2)
-
-        root_layout.addWidget(title)
-        root_layout.addWidget(top_panel)
-        root_layout.addLayout(content_layout, stretch=1)
+        root_layout.addWidget(label("Wyniki i raporty", "PageTitle"))
+        root_layout.addWidget(self._build_top_panel())
+        self._stats = [
+            StatCard(caption)
+            for caption in ("Partie", "Wygrane białych", "Wygrane czarnych", "Remisy")
+        ]
+        root_layout.addWidget(ResponsiveColumns(*self._stats, breakpoint=660))
+        chart = SectionCard("Rozkład wyników")
+        self._bars = []
+        for caption in (
+            "Wygrane białych",
+            "Wygrane czarnych",
+            "Remisy",
+            "Przerwane limitem",
+        ):
+            chart.body.addWidget(label(caption))
+            bar = QProgressBar()
+            bar.setRange(0, 1)
+            bar.setValue(0)
+            bar.setFormat("—")
+            chart.body.addWidget(bar)
+            self._bars.append(bar)
+        chart.body.addWidget(
+            label(
+                "Przerwane partie nie oznaczają remisu ani zwycięstwa. Kolor "
+                "dotyczy strony na planszy."
+            )
+        )
+        self._overview.setPlaceholderText("Wczytaj folder, aby zobaczyć statystyki.")
+        help_for(self._overview, "reports")
+        root_layout.addWidget(ResponsiveColumns(chart, self._overview), 1)
+        files = ResponsiveColumns(
+            self._build_files_panel(), self._build_preview_panel()
+        )
+        self._reports_disclosure = Disclosure("Raporty i pliki", files)
+        root_layout.addWidget(self._reports_disclosure)
 
         self.setLayout(root_layout)
 
@@ -109,13 +139,19 @@ class ResultsScreen(QWidget):
         folder_row.addWidget(self._folder_edit, stretch=1)
         folder_row.addWidget(self._browse_button)
         folder_row.addWidget(self._load_button)
-        folder_row.addWidget(self._open_folder_button)
-        folder_row.addWidget(back_button)
+        actions = QHBoxLayout()
+        actions.addWidget(self._open_folder_button)
+        actions.addWidget(back_button)
+        actions.addStretch()
+        self._load_button.setObjectName("PrimaryButton")
+        help_for(self._folder_edit, "files")
+        help_for(self._technical, "files")
 
         self._status_label.setObjectName("StatusLabel")
         self._status_label.setWordWrap(True)
 
         layout.addLayout(folder_row)
+        layout.addLayout(actions)
         layout.addWidget(self._status_label)
 
         panel.setLayout(layout)
@@ -161,6 +197,7 @@ class ResultsScreen(QWidget):
 
         self._preview.setReadOnly(True)
         self._preview.setPlaceholderText("Wybierz raport lub wykres po lewej stronie.")
+        self._preview.setMinimumHeight(240)
 
         layout.addWidget(title)
         layout.addWidget(self._preview, stretch=1)
@@ -180,6 +217,7 @@ class ResultsScreen(QWidget):
             self._folder_edit.setText(tr(selected_folder))
 
     def _load_results_folder(self) -> None:
+        self._reset_dashboard()
         try:
             summary = summarize_results_folder(self._folder_edit.text())
         except ValueError as error:
@@ -193,7 +231,9 @@ class ResultsScreen(QWidget):
         self._preview.clear()
 
         if not summary.exists:
-            self._status_label.setText(tr(f"Folder nie istnieje: {summary.folder}"))
+            self._status_label.setText(
+                tr("Folder nie istnieje: {folder}").format(folder=summary.folder)
+            )
             return
 
         for file_info in summary.files:
@@ -207,18 +247,51 @@ class ResultsScreen(QWidget):
             self._files_list.addItem(item)
 
         self._status_label.setText(
-            tr(
-                f"Wczytano folder: {summary.folder}. "
-                f"Liczba plików wynikowych: {len(summary.files)}."
-            )
+            tr("Wczytano raporty: {count} plików.").format(count=len(summary.files))
         )
 
-        from adaptive_chess.ui.results_presenter import overview
+        from adaptive_chess.ui.results_presenter import (
+            outcome,
+            overview,
+            overview_games,
+        )
 
         try:
+            games = overview_games(summary.folder)
+            captions = (
+                "Wygrane białych",
+                "Wygrane czarnych",
+                "Remisy",
+                "Przerwane limitem",
+            )
+            counts = [
+                sum(outcome(game) == tr(caption) for game in games)
+                for caption in captions
+            ]
+            for card, value in zip(self._stats, [len(games), *counts[:3]], strict=True):
+                card.set_value(value)
+            for bar, count in zip(self._bars, counts, strict=True):
+                bar.setRange(0, max(1, len(games)))
+                bar.setValue(count)
+                bar.setFormat(f"{count} / {len(games)}")
+            self._overview.setHtml(overview(summary.folder))
             self._preview.setHtml(overview(summary.folder))
         except (OSError, ValueError, KeyError) as error:
-            self._preview.setPlainText(str(error))
+            self._overview.setPlainText(str(error))
+
+    def _reset_dashboard(self) -> None:
+        self._loaded_folder = None
+        self._overview.clear()
+        for card in self._stats:
+            card.set_value("—")
+        for bar in self._bars:
+            bar.setRange(0, 1)
+            bar.setValue(0)
+            bar.setFormat("—")
+
+    def refresh_translation(self) -> None:
+        if self._loaded_folder is not None:
+            self._load_results_folder()
 
     def _show_selected_file_preview(self) -> None:
         file_info = self._get_selected_file_info()
@@ -244,7 +317,8 @@ class ResultsScreen(QWidget):
                 self._preview.setMarkdown(path.read_text(encoding="utf-8"))
             elif path.suffix == ".png":
                 url = escape(QUrl.fromLocalFile(str(path)).toString(), quote=True)
-                self._preview.setHtml(f'<img src="{url}" width="700">')
+                width = max(200, self._preview.viewport().width() - 30)
+                self._preview.setHtml(f'<img src="{url}" width="{width}">')
             else:
                 self._preview.setPlainText(read_text_preview(path))
         except (OSError, ValueError, KeyError) as error:

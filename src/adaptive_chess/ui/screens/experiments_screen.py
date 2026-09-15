@@ -8,7 +8,6 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFrame,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -28,7 +27,14 @@ from adaptive_chess.ui.experiment_config import (
     get_project_root,
     resolve_output_dir,
 )
+from adaptive_chess.ui.help_text import help_for
 from adaptive_chess.ui.i18n import tr
+from adaptive_chess.ui.widgets.components import (
+    HelpButton,
+    ResponsiveColumns,
+    form_layout,
+    label,
+)
 
 
 class ExperimentsScreen(QWidget):
@@ -74,28 +80,20 @@ class ExperimentsScreen(QWidget):
         root_layout.setSpacing(16)
 
         title = QLabel("Porównaj boty")
-        title.setObjectName("SectionTitle")
-
-        content_layout = QHBoxLayout()
-        content_layout.setSpacing(18)
+        title.setObjectName("PageTitle")
 
         config_panel = self._build_config_panel()
         log_panel = self._build_log_panel()
-
-        content_layout.addWidget(config_panel, stretch=1)
-        content_layout.addWidget(log_panel, stretch=2)
+        content = ResponsiveColumns(config_panel, log_panel, breakpoint=880)
 
         root_layout.addWidget(title)
         root_layout.addWidget(
-            QLabel("Boty zagrają ze sobą automatycznie. Nie musisz wykonywać ruchów.")
+            label("Boty zagrają ze sobą automatycznie. Nie musisz wykonywać ruchów.")
         )
         root_layout.addWidget(
-            QLabel(
-                "Porównanie pomocnicze. Aby badać uczenie z Twoich partii, "
-                "wybierz Graj."
-            )
+            label("Badanie uczenia z Twoich partii rozpoczniesz w Kampanii badawczej.")
         )
-        root_layout.addLayout(content_layout, stretch=1)
+        root_layout.addWidget(content, stretch=1)
 
         self.setLayout(root_layout)
 
@@ -103,43 +101,47 @@ class ExperimentsScreen(QWidget):
         panel = QFrame()
         panel.setObjectName("Panel")
 
-        layout = QGridLayout()
+        layout = QVBoxLayout()
         layout.setContentsMargins(18, 18, 18, 18)
         layout.setSpacing(12)
-
         self._configure_experiment_combo()
         self._configure_spinboxes()
         self._configure_buttons()
-
-        self._status_label.setObjectName("StatusLabel")
-        self._status_label.setWordWrap(True)
-
-        layout.addWidget(QLabel("Co chcesz porównać?"), 0, 0)
-        layout.addWidget(self._experiment_combo, 0, 1)
-
-        layout.addWidget(QLabel("Liczba partii"), 1, 0)
-        layout.addWidget(self._matches_spinbox, 1, 1)
-
-        layout.addWidget(QLabel("Maksymalna liczba ruchów obu stron"), 2, 0)
-        layout.addWidget(self._max_half_moves_spinbox, 2, 1)
-
-        layout.addWidget(QLabel("Poziom przewidywania"), 3, 0)
-        layout.addWidget(self._depth_spinbox, 3, 1)
-
-        layout.addWidget(QLabel("Folder wyników"), 4, 0)
-        layout.addWidget(self._output_dir_edit, 4, 1)
-
-        layout.addWidget(self._run_button, 5, 0, 1, 2)
-        layout.addWidget(self._cancel_button, 6, 0, 1, 2)
-        layout.addWidget(self._open_output_button, 7, 0, 1, 2)
-
+        form = form_layout()
+        for caption, widget, key in (
+            ("Co chcesz porównać?", self._experiment_combo, ""),
+            ("Liczba partii", self._matches_spinbox, "matches"),
+            ("Limit półruchów", self._max_half_moves_spinbox, "limit"),
+            ("Poziom przewidywania", self._depth_spinbox, "depth"),
+            ("Folder wyników", self._output_dir_edit, "files"),
+        ):
+            field_label = label(caption)
+            field_label.setBuddy(widget)
+            if key:
+                help_for(widget, key)
+                help_for(field_label, key)
+                row = QHBoxLayout()
+                row.addWidget(widget, 1)
+                row.addWidget(HelpButton(key))
+                form.addRow(field_label, row)
+            else:
+                form.addRow(field_label, widget)
+        layout.addLayout(form)
+        self._comparison_help = label("")
+        layout.addWidget(self._comparison_help)
+        self._experiment_combo.currentIndexChanged.connect(self.refresh_translation)
+        self.refresh_translation()
+        self._run_button.setObjectName("PrimaryButton")
+        layout.addWidget(self._run_button)
+        actions = QHBoxLayout()
+        actions.addWidget(self._cancel_button)
+        actions.addWidget(self._open_output_button)
+        layout.addLayout(actions)
         back_button = QPushButton("Powrót do menu")
         back_button.setObjectName("SecondaryButton")
         back_button.clicked.connect(self._on_back_to_menu_clicked)
-        layout.addWidget(back_button, 8, 0, 1, 2)
-
-        layout.addWidget(QLabel("Status"), 9, 0, 1, 2)
-        layout.addWidget(self._status_label, 10, 0, 1, 2)
+        layout.addWidget(back_button)
+        layout.addStretch()
 
         panel.setLayout(layout)
 
@@ -163,7 +165,7 @@ class ExperimentsScreen(QWidget):
         self._progress_bar.setRange(0, 1)
         self._progress_bar.setValue(0)
         self._report = QTextBrowser()
-        self._report.setPlainText(
+        self._report.setPlaceholderText(
             "Wybierz porównanie i liczbę partii, a następnie rozpocznij. "
             "Wyniki pojawią się tutaj."
         )
@@ -171,6 +173,9 @@ class ExperimentsScreen(QWidget):
         self._details.toggled.connect(self._log_output.setVisible)
         self._log_output.hide()
         layout.addWidget(log_title)
+        self._status_label.setObjectName("StatusBadge")
+        self._status_label.setWordWrap(True)
+        layout.addWidget(self._status_label)
         layout.addWidget(self._progress_bar)
         layout.addWidget(self._report, 1)
         layout.addWidget(self._details)
@@ -179,6 +184,18 @@ class ExperimentsScreen(QWidget):
         panel.setLayout(layout)
 
         return panel
+
+    def refresh_translation(self) -> None:
+        descriptions = (
+            "Pełny zestaw: cztery porównania botów.",
+            "Losowy punkt odniesienia: obie strony wybierają losowe ruchy.",
+            "Stałe przeszukiwanie kontra losowe ruchy.",
+            "Bot adaptacyjny kontra losowy punkt odniesienia.",
+            "Bot adaptacyjny kontra bot ze stałą oceną.",
+        )
+        description = tr(descriptions[self._experiment_combo.currentIndex()])
+        self._comparison_help.setText(description)
+        self._experiment_combo.setToolTip(description)
 
     def _configure_experiment_combo(self) -> None:
         self._experiment_combo.addItem(

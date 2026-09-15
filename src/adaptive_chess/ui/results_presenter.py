@@ -177,13 +177,19 @@ def file_html(path: Path) -> str:
     return heading + "<p>" + tr("Dane techniczne") + "</p>"
 
 
-def overview(folder: Path) -> str:
+def overview_games(folder: Path) -> list[dict]:
+    """Read the same game sources as the overview for visual summaries."""
     games = []
     for path in folder.rglob("*.csv"):
         games.extend(game_rows(path))
     if not games:
         for path in folder.rglob("campaign.json"):
             games.extend(game_rows(path))
+    return games
+
+
+def overview(folder: Path) -> str:
+    games = overview_games(folder)
     return (
         "<h1>"
         + tr("Podsumowanie")

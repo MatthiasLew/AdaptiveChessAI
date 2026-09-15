@@ -34,7 +34,8 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("AdaptiveChessAI")
-        self.resize(1180, 760)
+        available = self.screen().availableGeometry()
+        self.resize(min(1180, available.width()), min(760, available.height() - 40))
         self._fullscreen_shortcut = QShortcut(QKeySequence("F11"), self)
         self._fullscreen_shortcut.activated.connect(self.toggle_fullscreen)
         self._escape_shortcut = QShortcut(QKeySequence("Escape"), self)
@@ -71,12 +72,14 @@ class MainWindow(QMainWindow):
         from adaptive_chess.ui.theme import (
             DARK_THEME_STYLESHEET,
             LIGHT_THEME_STYLESHEET,
+            apply_palette,
         )
 
         set_language(settings.language)
         localize(self._stack)
         app = QApplication.instance()
         if isinstance(app, QApplication):
+            apply_palette(app, settings.theme)
             stylesheet = (
                 LIGHT_THEME_STYLESHEET
                 if settings.theme == "light"

@@ -10,7 +10,9 @@ from PySide6.QtWidgets import (
     QLabel,
     QListWidget,
     QPushButton,
+    QScrollArea,
     QSpinBox,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -24,13 +26,21 @@ from adaptive_chess.ui.bot_factory import (
     create_bot_for_gui,
     parse_human_color,
 )
-from adaptive_chess.ui.i18n import tr
+from adaptive_chess.ui.help_text import help_for
+from adaptive_chess.ui.i18n import game_status, tr
 from adaptive_chess.ui.move_builder import (
     build_uci_move_from_clicks,
     get_legal_target_squares,
 )
 from adaptive_chess.ui.screens.campaign_screen import CampaignWorker
 from adaptive_chess.ui.widgets.chess_board_widget import ChessBoardWidget
+from adaptive_chess.ui.widgets.components import (
+    BoardArea,
+    Disclosure,
+    SectionCard,
+    form_layout,
+    label,
+)
 
 
 class GameScreen(QWidget):
@@ -49,6 +59,11 @@ class GameScreen(QWidget):
     - status gry,
     - zakończenie i podsumowanie aktualnej partii.
     """
+
+    def heightForWidth(self, width: int) -> int:
+        # Wrapped labels must not force the preferred height of scrollable tabs.
+        layout = self.layout()
+        return layout.minimumHeightForWidth(width) if layout else -1
 
     def apply_defaults(
         self,
@@ -84,7 +99,6 @@ class GameScreen(QWidget):
         self._selected_square: chess.Square | None = None
 
         self._board_widget = ChessBoardWidget()
-        self._board_widget.setFixedSize(512, 512)
         self._board_widget.square_clicked.connect(self._on_board_square_clicked)
 
         self._bot_combo = QComboBox()
@@ -121,6 +135,9 @@ class GameScreen(QWidget):
         self._status_label.setText(tr("Wybierz ustawienia i kliknij „Nowa gra”."))
         self._fen_label.setText(tr(board.fen()))
         self._history_list.clear()
+        self._agent_label.clear()
+        self._agent_label.hide()
+        self._game_tabs.setCurrentIndex(0)
 
         self._set_configuration_enabled(True)
         self._finish_game_button.setEnabled(False)
@@ -128,11 +145,11 @@ class GameScreen(QWidget):
 
     def _build_ui(self) -> None:
         root_layout = QVBoxLayout()
-        root_layout.setContentsMargins(30, 30, 30, 30)
+        root_layout.setContentsMargins(18, 18, 18, 18)
         root_layout.setSpacing(16)
 
         title = QLabel("Gra z botem")
-        title.setObjectName("SectionTitle")
+        title.setObjectName("PageTitle")
 
         content_layout = QHBoxLayout()
         content_layout.setSpacing(18)
@@ -153,10 +170,10 @@ class GameScreen(QWidget):
         panel.setObjectName("Panel")
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(12)
 
-        layout.addWidget(self._board_widget, stretch=1)
+        layout.addWidget(BoardArea(self._board_widget), stretch=1)
 
         hint = QLabel(
             "Kliknij własną figurę, a potem pole docelowe. "
@@ -166,72 +183,76 @@ class GameScreen(QWidget):
         hint.setWordWrap(True)
         hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        layout.addWidget(hint)
+        self._board_widget.setToolTip(hint.text())
+        hint.deleteLater()
         panel.setLayout(layout)
 
         return panel
 
     def _build_side_panel(self) -> QFrame:
-        panel = QFrame()
-        panel.setObjectName("Panel")
-
-        layout = QVBoxLayout()
-        layout.setContentsMargins(18, 18, 18, 18)
-        layout.setSpacing(12)
-
-        settings_title = QLabel("Ustawienia gry")
-        settings_title.setObjectName("SectionTitle")
-
+        panel = SectionCard()
+        panel.setMinimumWidth(300)
+        panel.body.setSpacing(8)
+        panel.body.setContentsMargins(12, 12, 12, 12)
+        layout = panel.body
         self._configure_bot_combo()
         self._configure_human_color_combo()
         self._configure_depth_spinbox()
         self._configure_buttons()
-
-        self._status_label.setObjectName("StatusLabel")
+        self._status_label.setObjectName("StatusBadge")
         self._status_label.setWordWrap(True)
-
-        fen_title = QLabel("FEN")
+        layout.addWidget(self._status_label)
+        self._agent_label = label("")
+        layout.addWidget(self._agent_label)
+        form = form_layout()
+        for caption, widget in (
+            ("Bot", self._bot_combo),
+            ("Kolor gracza", self._human_color_combo),
+            ("Głębokość minimaxa", self._depth_spinbox),
+        ):
+            field_label = label(caption)
+            field_label.setBuddy(widget)
+            form.addRow(field_label, widget)
+        configuration = QWidget()
+        config_layout = QVBoxLayout(configuration)
+        config_layout.setContentsMargins(8, 8, 8, 8)
+        config_layout.addLayout(form)
+        help_for(self._depth_spinbox, "depth")
+        self._new_game_button.setObjectName("PrimaryButton")
+        config_layout.addWidget(self._new_game_button)
+        config_layout.addStretch()
+        self._game_tabs = QTabWidget()
+        configuration_scroll = QScrollArea()
+        configuration_scroll.setWidgetResizable(True)
+        configuration_scroll.setWidget(configuration)
+        self._game_tabs.addTab(configuration_scroll, "Ustawienia gry")
+        self._game_tabs.addTab(self._history_list, "Historia ruchów")
+        self._history_list.setMinimumHeight(100)
+        layout.addWidget(self._game_tabs, 1)
+        finish = QWidget()
+        finish_layout = QVBoxLayout(finish)
+        finish_layout.setContentsMargins(0, 0, 0, 0)
+        finish_layout.addWidget(self._finish_game_button)
+        finish_layout.addWidget(self._clear_game_button)
         self._fen_label.setObjectName("FenLabel")
         self._fen_label.setWordWrap(True)
-
-        history_title = QLabel("Historia ruchów")
-
-        layout.addWidget(settings_title)
-
-        layout.addWidget(QLabel("Bot"))
-        layout.addWidget(self._bot_combo)
-
-        layout.addWidget(QLabel("Kolor gracza"))
-        layout.addWidget(self._human_color_combo)
-
-        layout.addWidget(QLabel("Głębokość minimaxa"))
-        layout.addWidget(self._depth_spinbox)
-
-        layout.addWidget(self._new_game_button)
-        layout.addWidget(self._finish_game_button)
-        layout.addWidget(self._clear_game_button)
-
+        self._fen_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        help_for(self._fen_label, "fen")
+        finish_layout.addWidget(label("FEN"))
+        finish_layout.addWidget(self._fen_label)
+        layout.addWidget(Disclosure("Szczegóły techniczne", finish))
+        actions = QHBoxLayout()
         resign_button = QPushButton("Poddaj partię")
+        resign_button.setObjectName("DangerButton")
         resign_button.clicked.connect(self._resign)
-        layout.addWidget(resign_button)
+        actions.addWidget(resign_button)
         back_button = QPushButton("Powrót do menu")
         back_button.setObjectName("SecondaryButton")
         back_button.clicked.connect(self._on_back_to_menu_clicked)
-        layout.addWidget(back_button)
-
-        layout.addSpacing(10)
-
-        layout.addWidget(QLabel("Status"))
-        layout.addWidget(self._status_label)
-
-        layout.addWidget(fen_title)
-        layout.addWidget(self._fen_label)
-
-        layout.addWidget(history_title)
-        layout.addWidget(self._history_list, stretch=1)
-
-        panel.setLayout(layout)
-
+        actions.addWidget(back_button)
+        layout.addLayout(actions)
         return panel
 
     def _configure_bot_combo(self) -> None:
@@ -277,6 +298,7 @@ class GameScreen(QWidget):
         )
 
         self._set_configuration_enabled(False)
+        self._game_tabs.setCurrentIndex(1)
         self._finish_game_button.setEnabled(True)
         self._clear_game_button.setEnabled(True)
 
@@ -342,7 +364,7 @@ class GameScreen(QWidget):
             return
 
         if self._session.is_game_over():
-            self._status_label.setText(tr(self._session.get_status_message()))
+            self._status_label.setText(game_status(self._session.get_status_message()))
             self._clear_selection()
             return
 
@@ -416,7 +438,9 @@ class GameScreen(QWidget):
         self._board_widget.set_legal_target_squares(legal_targets)
 
         square_name = chess.square_name(square)
-        self._status_label.setText(tr(f"Wybrano figurę na polu {square_name}."))
+        self._status_label.setText(
+            tr("Wybrano figurę na polu {square}.").format(square=square_name)
+        )
 
     def _try_play_selected_move(
         self,
@@ -438,9 +462,9 @@ class GameScreen(QWidget):
             if m.from_square == self._selected_square and m.to_square == target_square
         ]
         if candidates and candidates[0].promotion:
-            names = ["Hetman", "Wieża", "Goniec", "Skoczek"]
+            names = [tr(name) for name in ("Hetman", "Wieża", "Goniec", "Skoczek")]
             choice, accepted = QInputDialog.getItem(
-                self, "Promocja", "Wybierz figurę", names, 0, False
+                self, tr("Promocja"), tr("Wybierz figurę"), names, 0, False
             )
             if not accepted:
                 return
@@ -465,9 +489,11 @@ class GameScreen(QWidget):
         self._board_widget.set_flipped(self._session.human_color == chess.BLACK)
         self._board_widget.set_board(board)
 
-        self._status_label.setText(tr(self._session.get_status_message()))
+        self._status_label.setText(game_status(self._session.get_status_message()))
         self._fen_label.setText(tr(self._session.get_fen()))
 
+        self._agent_label.setText(self._session.bot_name)
+        self._agent_label.show()
         self._refresh_history()
 
     def _refresh_history(self) -> None:
@@ -482,7 +508,7 @@ class GameScreen(QWidget):
             player = "gracz" if move.player_type.value == "human" else "bot"
 
             self._history_list.addItem(
-                f"{index:02d}. {color} {player}: {move.san} ({move.move_uci})"
+                f"{index:02d}. {tr(color)} {tr(player)}: {move.san}"
             )
 
     def _clear_selection(self) -> None:

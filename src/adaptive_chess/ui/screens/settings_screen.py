@@ -3,8 +3,7 @@ from collections.abc import Callable
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QFrame,
-    QGridLayout,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
@@ -44,16 +43,18 @@ class SettingsScreen(QWidget):
         self._theme_combo = QComboBox()
         self._theme_combo.addItem("Ciemny", "dark")
         self._theme_combo.addItem("Jasny", "light")
-        self._fullscreen = QCheckBox(
-            "Uruchamiaj na pełnym ekranie (F11 przełącza, Esc wraca do okna)"
-        )
+        self._fullscreen = QCheckBox("Uruchamiaj na pełnym ekranie")
+        self._fullscreen.setToolTip("F11 przełącza pełny ekran, Esc wraca do okna.")
         self._delay = QSpinBox()
         self._delay.setRange(300, 3000)
         self._delay.setSingleStep(100)
         self._delay.setSuffix(" ms")
         self._bot_combo = QComboBox()
         self._color_combo = QComboBox()
-        self._depth_spinbox = QSpinBox()
+        self._depth_combo = QComboBox()
+        self._strength_help = QLabel()
+        self._strength_help.setWordWrap(True)
+        self._strength_help.setObjectName("HelperText")
         self._experiment_output_edit = QLineEdit()
         self._status_label = QLabel("")
 
@@ -76,71 +77,75 @@ class SettingsScreen(QWidget):
         self._set_combo_by_data(self._theme_combo, settings.theme)
         self._fullscreen.setChecked(settings.fullscreen)
         self._delay.setValue(settings.bot_delay_ms)
-        self._depth_spinbox.setValue(settings.default_depth)
+        self._depth_combo.setCurrentIndex(settings.default_depth - 1)
         self._experiment_output_edit.setText(tr(settings.default_experiment_output_dir))
 
     def _build_ui(self) -> None:
-        root_layout = QVBoxLayout()
-        root_layout.setContentsMargins(30, 30, 30, 30)
-        root_layout.setSpacing(16)
+        from adaptive_chess.ui.help_text import help_for
+        from adaptive_chess.ui.widgets.components import (
+            SectionCard,
+            form_layout,
+            label,
+        )
 
-        title = QLabel("Ustawienia")
-        title.setObjectName("SectionTitle")
-
-        panel = QFrame()
-        panel.setObjectName("Panel")
-
-        layout = QGridLayout()
-        layout.setContentsMargins(24, 24, 24, 24)
-        layout.setSpacing(14)
-
+        root = QVBoxLayout(self)
+        root.setContentsMargins(24, 24, 24, 24)
+        root.setSpacing(16)
+        root.addWidget(label("Ustawienia", "PageTitle"))
         self._configure_controls()
-
-        save_button = QPushButton("Zapisz ustawienia")
-        save_button.clicked.connect(self._save_settings)
-
-        reset_button = QPushButton("Przywróć domyślne")
-        reset_button.setObjectName("SecondaryButton")
-        reset_button.clicked.connect(self._restore_defaults)
-
-        back_button = QPushButton("Powrót do menu")
-        back_button.setObjectName("SecondaryButton")
-        back_button.clicked.connect(self._on_back_to_menu_clicked)
-
+        sections = (
+            (
+                "Wygląd",
+                (
+                    ("Język interfejsu", self._language_combo),
+                    ("Wygląd", self._theme_combo),
+                ),
+            ),
+            (
+                "Gra",
+                (
+                    ("Domyślny bot", self._bot_combo),
+                    ("Domyślny kolor gracza", self._color_combo),
+                    ("Przewidywanie przeciwnika", self._depth_combo),
+                    ("Pauza przed ruchem bota", self._delay),
+                ),
+            ),
+            (
+                "Badania / pliki",
+                (("Domyślny folder eksperymentów", self._experiment_output_edit),),
+            ),
+        )
+        for title, fields in sections:
+            card = SectionCard(title)
+            form = form_layout()
+            for caption, widget in fields:
+                field_label = label(caption)
+                field_label.setBuddy(widget)
+                form.addRow(field_label, widget)
+            card.body.addLayout(form)
+            if title == "Gra":
+                card.body.addWidget(self._strength_help)
+            if title == "Wygląd":
+                card.body.addWidget(self._fullscreen)
+            root.addWidget(card)
+        help_for(self._depth_combo, "depth")
+        help_for(self._experiment_output_edit, "files")
+        actions = QHBoxLayout()
+        for caption, action, role in (
+            ("Zapisz ustawienia", self._save_settings, "PrimaryButton"),
+            ("Przywróć domyślne", self._restore_defaults, "SecondaryButton"),
+            ("Powrót do menu", self._on_back_to_menu_clicked, "SecondaryButton"),
+        ):
+            button = QPushButton(caption)
+            button.setObjectName(role)
+            button.clicked.connect(action)
+            actions.addWidget(button)
+        actions.addStretch()
+        root.addLayout(actions)
         self._status_label.setObjectName("SaveStatusLabel")
         self._status_label.setWordWrap(True)
-
-        layout.addWidget(QLabel("Domyślny bot"), 0, 0)
-        layout.addWidget(self._bot_combo, 0, 1)
-
-        layout.addWidget(QLabel("Domyślny kolor gracza"), 1, 0)
-        layout.addWidget(self._color_combo, 1, 1)
-
-        layout.addWidget(QLabel("Siła przewidywania ruchów"), 2, 0)
-        layout.addWidget(self._depth_spinbox, 2, 1)
-
-        layout.addWidget(QLabel("Domyślny folder eksperymentów"), 3, 0)
-        layout.addWidget(self._experiment_output_edit, 3, 1)
-
-        layout.addWidget(QLabel("Język interfejsu"), 4, 0)
-        layout.addWidget(self._language_combo, 4, 1)
-        layout.addWidget(QLabel("Wygląd"), 5, 0)
-        layout.addWidget(self._theme_combo, 5, 1)
-        layout.addWidget(self._fullscreen, 6, 0, 1, 2)
-        layout.addWidget(QLabel("Pauza przed ruchem bota"), 7, 0)
-        layout.addWidget(self._delay, 7, 1)
-        layout.addWidget(save_button, 8, 0, 1, 2)
-        layout.addWidget(reset_button, 9, 0, 1, 2)
-        layout.addWidget(back_button, 10, 0, 1, 2)
-        layout.addWidget(self._status_label, 11, 0, 1, 2)
-
-        panel.setLayout(layout)
-
-        root_layout.addWidget(title)
-        root_layout.addWidget(panel)
-        root_layout.addStretch()
-
-        self.setLayout(root_layout)
+        root.addWidget(self._status_label)
+        root.addStretch()
 
     def _configure_controls(self) -> None:
         self._bot_combo.addItem(
@@ -159,8 +164,28 @@ class SettingsScreen(QWidget):
         self._color_combo.addItem("Białe", "white")
         self._color_combo.addItem("Czarne", "black")
 
-        self._depth_spinbox.setMinimum(1)
-        self._depth_spinbox.setMaximum(4)
+        for depth, caption in enumerate(
+            ("1 — Szybkie", "2 — Umiarkowane", "3 — Dokładne", "4 — Najgłębsze"),
+            start=1,
+        ):
+            self._depth_combo.addItem(tr(caption), depth)
+        self._bot_combo.currentIndexChanged.connect(self.refresh_translation)
+        self.refresh_translation()
+
+    def refresh_translation(self) -> None:
+        random = self._bot_combo.currentData() == BotKind.RANDOM.value
+        self._depth_combo.setEnabled(not random)
+        self._strength_help.setText(
+            tr(
+                "RandomBot wybiera losowe legalne ruchy. "
+                "Poziom przewidywania nie wpływa na jego grę."
+                if random
+                else "Zakres 1-4: tyle półruchów bot analizuje w przód. "
+                "1 jest najszybsze, 4 analizuje najgłębiej i może długo liczyć. "
+                "Większa głębokość zwykle pomaga, ale nie gwarantuje wygranej. "
+                "To nie jest ranking Elo."
+            )
+        )
 
     def _save_settings(self) -> None:
         output_dir = self._experiment_output_edit.text().strip()
@@ -176,7 +201,7 @@ class SettingsScreen(QWidget):
             bot_delay_ms=self._delay.value(),
             default_bot=self._bot_combo.currentData(),
             default_human_color=self._color_combo.currentData(),
-            default_depth=self._depth_spinbox.value(),
+            default_depth=int(self._depth_combo.currentData()),
             default_experiment_output_dir=output_dir,
         )
 
@@ -200,7 +225,7 @@ class SettingsScreen(QWidget):
         self._set_combo_by_data(self._theme_combo, defaults.theme)
         self._fullscreen.setChecked(defaults.fullscreen)
         self._delay.setValue(defaults.bot_delay_ms)
-        self._depth_spinbox.setValue(defaults.default_depth)
+        self._depth_combo.setCurrentIndex(defaults.default_depth - 1)
         self._experiment_output_edit.setText(tr(defaults.default_experiment_output_dir))
 
         self._status_label.setText(

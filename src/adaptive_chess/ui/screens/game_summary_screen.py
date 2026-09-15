@@ -2,24 +2,33 @@ from collections.abc import Callable
 from pathlib import Path
 
 import chess
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QFrame,
-    QGridLayout,
+    QHBoxLayout,
     QLabel,
     QListWidget,
     QPushButton,
+    QScrollArea,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
 from adaptive_chess.play.game_exporter import write_game_summary_exports
 from adaptive_chess.play.human_vs_bot_session import HumanVsBotGameSummary
-from adaptive_chess.ui.i18n import tr
+from adaptive_chess.ui.help_text import help_for
+from adaptive_chess.ui.i18n import game_status, tr
 from adaptive_chess.ui.summary_formatter import (
     color_to_polish,
-    describe_material_balance,
     describe_result,
+)
+from adaptive_chess.ui.widgets.chess_board_widget import ChessBoardWidget
+from adaptive_chess.ui.widgets.components import (
+    BoardArea,
+    Disclosure,
+    ResponsiveColumns,
+    SectionCard,
+    form_layout,
+    label,
 )
 
 DEFAULT_HUMAN_GAME_RESULTS_DIR = Path("results") / "human_games"
@@ -50,6 +59,8 @@ class GameSummaryScreen(QWidget):
         self._fen_label = QLabel("-")
         self._save_status_label = QLabel("")
         self._history_list = QListWidget()
+        self._board_widget = ChessBoardWidget()
+        self._position_help = label("")
 
         self._build_ui()
 
@@ -58,19 +69,58 @@ class GameSummaryScreen(QWidget):
         Ustawia dane zakończonej partii.
         """
         self._summary = summary
-        self._save_status_label.setText(tr(""))
+        self._save_status_label.clear()
+        self._save_status_label.hide()
 
         self._result_label.setText(
-            tr(f"{summary.result} — {describe_result(summary.result)}")
+            f"{summary.result} — {tr(describe_result(summary.result))}"
         )
-        self._status_label.setText(tr(summary.status_message))
+        self._status_label.setText(game_status(summary.status_message))
         self._bot_label.setText(tr(summary.bot_name))
         self._human_color_label.setText(tr(color_to_polish(summary.human_color)))
         self._half_moves_label.setText(tr(str(summary.half_moves)))
+        balance = summary.final_material_balance
         self._material_label.setText(
-            tr(describe_material_balance(summary.final_material_balance))
+            tr("Białe +{value}" if balance > 0 else "Czarne +{value}").format(
+                value=abs(balance)
+            )
+            if balance
+            else tr("Równy materiał")
         )
         self._fen_label.setText(tr(summary.final_fen))
+        board = chess.Board(summary.final_fen)
+        self._board_widget.set_flipped(summary.human_color == chess.BLACK)
+        self._board_widget.clear_highlights()
+        self._board_widget.set_board(
+            board,
+            last_move=chess.Move.from_uci(summary.move_history[-1].move_uci)
+            if summary.move_history
+            else None,
+        )
+        if board.is_check():
+            self._board_widget.set_selected_square(board.king(board.turn))
+        if board.is_checkmate():
+            self._position_help.setText(
+                tr(
+                    "Mat: zaznaczony król jest szachowany. Legalne odpowiedzi: 0. "
+                    "Nie można uciec królem, zbić szachującej figury "
+                    "ani zasłonić szacha."
+                )
+            )
+        elif board.is_stalemate():
+            self._position_help.setText(
+                tr(
+                    "Pat: król nie jest szachowany, ale strona na ruchu nie ma "
+                    "legalnego ruchu. To remis."
+                )
+            )
+        else:
+            self._position_help.setText(
+                tr(
+                    "Końcowa pozycja do obejrzenia. "
+                    "Powód zakończenia podano przy wyniku."
+                )
+            )
 
         self._history_list.clear()
 
@@ -79,87 +129,69 @@ class GameSummaryScreen(QWidget):
             player = "gracz" if move.player_type.value == "human" else "bot"
 
             self._history_list.addItem(
-                f"{index:02d}. {color} {player}: {move.san} ({move.move_uci})"
+                f"{index:02d}. {tr(color)} {tr(player)}: {move.san}"
             )
 
     def _build_ui(self) -> None:
-        root_layout = QVBoxLayout()
-        root_layout.setContentsMargins(30, 30, 30, 30)
-        root_layout.setSpacing(16)
-
-        title = QLabel("Podsumowanie partii")
-        title.setObjectName("SectionTitle")
-
-        content_panel = QFrame()
-        content_panel.setObjectName("Panel")
-
-        content_layout = QGridLayout()
-        content_layout.setContentsMargins(22, 22, 22, 22)
-        content_layout.setSpacing(14)
-
+        root = QVBoxLayout(self)
+        root.setContentsMargins(16, 16, 16, 16)
+        root.setSpacing(10)
+        root.addWidget(label("Podsumowanie partii", "PageTitle"))
+        panel = SectionCard()
+        panel.body.setContentsMargins(12, 12, 12, 12)
+        panel.body.setSpacing(8)
         self._result_label.setObjectName("SummaryResultLabel")
+        self._result_label.setWordWrap(True)
         self._status_label.setWordWrap(True)
+        panel.body.addWidget(self._result_label)
+        panel.body.addWidget(self._status_label)
+        panel.body.addWidget(self._position_help)
+        tabs = QTabWidget()
+        tabs.addTab(self._history_list, tr("Historia ruchów"))
+        details = QWidget()
+        form = form_layout()
+        details.setLayout(form)
+        for caption, value in (
+            ("Bot", self._bot_label),
+            ("Kolor gracza", self._human_color_label),
+            ("Liczba półruchów", self._half_moves_label),
+            ("Końcowy materiał", self._material_label),
+        ):
+            form.addRow(label(caption), value)
         self._fen_label.setWordWrap(True)
-        self._fen_label.setObjectName("FenLabel")
-        self._save_status_label.setObjectName("SaveStatusLabel")
+        help_for(self._fen_label, "fen")
+        form.addRow(Disclosure("Końcowy FEN", self._fen_label))
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(details)
+        tabs.addTab(scroll, tr("Szczegóły techniczne"))
+        panel.body.addWidget(tabs, 1)
+        panel.setMinimumWidth(300)
+        root.addWidget(
+            ResponsiveColumns(BoardArea(self._board_widget), panel, breakpoint=700), 1
+        )
+        buttons = QHBoxLayout()
+        for caption, callback, role in (
+            ("Zapisz partię", self._save_summary, "SecondaryButton"),
+            ("Graj ponownie", self._on_play_again_clicked, "PrimaryButton"),
+            ("Powrót do menu", self._on_back_to_menu_clicked, "SecondaryButton"),
+        ):
+            button = QPushButton(caption)
+            button.setObjectName(role)
+            button.clicked.connect(callback)
+            buttons.addWidget(button)
+            if caption == "Zapisz partię":
+                help_for(button, "files")
+        root.addLayout(buttons)
         self._save_status_label.setWordWrap(True)
+        self._save_status_label.hide()
+        root.addWidget(self._save_status_label)
 
-        content_layout.addWidget(QLabel("Wynik"), 0, 0)
-        content_layout.addWidget(self._result_label, 0, 1)
-
-        content_layout.addWidget(QLabel("Status"), 1, 0)
-        content_layout.addWidget(self._status_label, 1, 1)
-
-        content_layout.addWidget(QLabel("Bot"), 2, 0)
-        content_layout.addWidget(self._bot_label, 2, 1)
-
-        content_layout.addWidget(QLabel("Kolor gracza"), 3, 0)
-        content_layout.addWidget(self._human_color_label, 3, 1)
-
-        content_layout.addWidget(QLabel("Liczba półruchów"), 4, 0)
-        content_layout.addWidget(self._half_moves_label, 4, 1)
-
-        content_layout.addWidget(QLabel("Końcowy materiał"), 5, 0)
-        content_layout.addWidget(self._material_label, 5, 1)
-
-        content_layout.addWidget(QLabel("Końcowy FEN"), 6, 0)
-        content_layout.addWidget(self._fen_label, 6, 1)
-
-        history_title = QLabel("Historia ruchów")
-        history_title.setObjectName("SectionTitle")
-
-        content_layout.addWidget(history_title, 7, 0, 1, 2)
-        content_layout.addWidget(self._history_list, 8, 0, 1, 2)
-
-        buttons_layout = QVBoxLayout()
-        buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        buttons_layout.setSpacing(10)
-
-        save_button = QPushButton("Zapisz partię")
-        save_button.clicked.connect(self._save_summary)
-
-        play_again_button = QPushButton("Graj ponownie")
-        play_again_button.clicked.connect(self._on_play_again_clicked)
-
-        menu_button = QPushButton("Powrót do menu")
-        menu_button.setObjectName("SecondaryButton")
-        menu_button.clicked.connect(self._on_back_to_menu_clicked)
-
-        buttons_layout.addWidget(save_button)
-        buttons_layout.addWidget(play_again_button)
-        buttons_layout.addWidget(menu_button)
-
-        content_layout.addLayout(buttons_layout, 9, 0, 1, 2)
-        content_layout.addWidget(self._save_status_label, 10, 0, 1, 2)
-
-        content_panel.setLayout(content_layout)
-
-        root_layout.addWidget(title)
-        root_layout.addWidget(content_panel, stretch=1)
-
-        self.setLayout(root_layout)
+    def heightForWidth(self, width: int) -> int:
+        return self.layout().minimumHeightForWidth(width)
 
     def _save_summary(self) -> None:
+        self._save_status_label.show()
         if self._summary is None:
             self._save_status_label.setText(tr("Brak partii do zapisania."))
             return

@@ -1,173 +1,137 @@
-DARK_THEME_STYLESHEET = """
-QLabel#BoardLightSquare, QLabel#BoardDarkSquare,
-QLabel#BoardSelectedSquare, QLabel#BoardLegalTargetSquare,
-QLabel#BoardLastMoveSquare {
-    font-family: "Segoe UI Symbol";
-    font-size: 38px;
+"""Semantic palettes and shared Qt component roles (logical pixels)."""
+
+from collections.abc import Mapping
+
+DARK = {
+    "background": "#101820",
+    "surface": "#18232e",
+    "surface_alt": "#22313f",
+    "border": "#405363",
+    "text_primary": "#edf3f7",
+    "text_secondary": "#b4c3cf",
+    "accent": "#246baf",
+    "accent_hover": "#307abd",
+    "on_accent": "#ffffff",
+    "success": "#7dd3ac",
+    "warning": "#edc475",
+    "danger": "#c14450",
+    "board_light": "#e1e7e5",
+    "board_dark": "#91a7ad",
 }
-QMainWindow {
-    background-color: #101820;
+LIGHT = {
+    "background": "#f0f3f6",
+    "surface": "#ffffff",
+    "surface_alt": "#e7edf2",
+    "border": "#a9bac8",
+    "text_primary": "#192d3c",
+    "text_secondary": "#486070",
+    "accent": "#205e98",
+    "accent_hover": "#174d7d",
+    "on_accent": "#ffffff",
+    "success": "#206e50",
+    "warning": "#885c15",
+    "danger": "#b33745",
+    "board_light": "#e1e7e5",
+    "board_dark": "#91a7ad",
 }
 
-QWidget {
-    background-color: #101820;
-    color: #f2f5f7;
-    font-family: Segoe UI, Arial, sans-serif;
-    font-size: 14px;
-}
 
-QLabel#TitleLabel {
-    font-size: 34px;
-    font-weight: 700;
-    color: #ffffff;
-}
-
-QLabel#SubtitleLabel {
-    font-size: 15px;
-    color: #b8c7d9;
-}
-
-QLabel#SectionTitle {
-    font-size: 22px;
-    font-weight: 600;
-    color: #ffffff;
-}
-
-QPushButton {
-    background-color: #1f6feb;
-    color: #ffffff;
-    border: none;
-    border-radius: 6px;
-    padding: 10px 18px;
-    min-height: 28px;
-}
-
-QPushButton:hover {
-    background-color: #388bfd;
-}
-
-QPushButton:pressed {
-    background-color: #1158c7;
-}
-
-QPushButton#SecondaryButton {
-    background-color: #30363d;
-}
-
-QPushButton#SecondaryButton:hover {
-    background-color: #484f58;
-}
-
-QPushButton#DangerButton {
-    background-color: #da3633;
-}
-
-QPushButton#DangerButton:hover {
-    background-color: #f85149;
-}
-
-QFrame#Panel {
-    background-color: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 10px;
-}
-
-QComboBox,
-QSpinBox,
-QLineEdit {
-    background-color: #0d1117;
-    border: 1px solid #30363d;
-    border-radius: 5px;
-    padding: 6px;
-    color: #f2f5f7;
-}
-
-QTextEdit,
-QPlainTextEdit {
-    background-color: #0d1117;
-    border: 1px solid #30363d;
-    border-radius: 5px;
-    color: #d0d7de;
-}
-QFrame#BoardFrame {
-    background-color: #0d1117;
-    border: 2px solid #30363d;
-    border-radius: 8px;
-}
-
-QLabel#BoardLightSquare {
-    background-color: #d6e0f0;
-    color: #101820;
-    border: none;
-}
-
-QLabel#BoardDarkSquare {
-    background-color: #59708a;
-    color: #101820;
-    border: none;
-}
-
-QLabel#StatusLabel {
-    font-size: 16px;
-    font-weight: 600;
-    color: #ffffff;
-}
-
-QLabel#FenLabel {
-    color: #b8c7d9;
-    font-size: 12px;
-}
-QLabel#BoardLastMoveSquare {
-    background-color: #e1bd63;
-    color: #101820;
-    border: 2px solid #ffe7a1;
-}
-QLabel#BoardSelectedSquare {
-    background-color: #f2cc60;
-    color: #101820;
-    border: 2px solid #ffffff;
-}
-
-QLabel#BoardLegalTargetSquare {
-    background-color: #56d364;
-    color: #101820;
-    border: 2px solid #ffffff;
-}
-QLabel#SummaryResultLabel {
-    font-size: 24px;
-    font-weight: 700;
-    color: #ffffff;
-}
-QLabel#SaveStatusLabel {
-    color: #56d364;
-    font-size: 12px;
-}
-"""
-
-
-LIGHT_THEME_STYLESHEET = DARK_THEME_STYLESHEET
-for dark, light in {
-    "#101820": "#f5f7fb",
-    "#f2f5f7": "#172033",
-    "#b8c7d9": "#475569",
-    "#161b22": "#ffffff",
-    "#0d1117": "#ffffff",
-    "#30363d": "#dbe3ef",
-    "#d0d7de": "#172033",
-    "#484f58": "#cbd5e1",
-}.items():
-    LIGHT_THEME_STYLESHEET = LIGHT_THEME_STYLESHEET.replace(dark, light)
-LIGHT_THEME_STYLESHEET += """
-QLabel { color: #172033; background: transparent; }
-QLabel#TitleLabel, QLabel#SectionTitle { color: #172033; }
+def build_stylesheet(palette: Mapping[str, str]) -> str:
+    """Generate both themes from the same component contract."""
+    p = palette
+    return f"""
+QMainWindow, QScrollArea, QStackedWidget {{ background: {p["background"]}; }}
+QWidget {{ color: {p["text_primary"]}; font-family: "Segoe UI";
+    font-size: 14px; }}
+QLabel, QCheckBox {{ background: transparent; }}
+QScrollArea {{ border: none; }}
+QFrame#Panel, QFrame#Card, QFrame#SectionCard, QFrame#StatCard {{
+    background: {p["surface"]}; border: 1px solid {p["border"]};
+    border-radius: 10px; }}
+QLabel#PageTitle, QLabel#TitleLabel {{ font-size: 28px; font-weight: 700; }}
+QLabel#SectionTitle {{ font-size: 18px; font-weight: 600; }}
+QLabel#HelperText, QLabel#SubtitleLabel, QLabel#FenLabel {{
+    color: {p["text_secondary"]}; font-size: 13px; }}
+QLabel#StatusBadge, QLabel#StatusLabel {{ background: {p["surface_alt"]};
+    border-radius: 6px; padding: 8px; font-weight: 600; }}
+QLabel#SummaryResultLabel, QLabel#StatValue {{ font-size: 26px; font-weight: 700; }}
+QLabel#SaveStatusLabel {{ color: {p["success"]}; }}
+QPushButton {{ background: {p["surface_alt"]}; color: {p["text_primary"]};
+    border: 1px solid {p["border"]}; border-radius: 6px;
+    padding: 7px 12px; min-height: 20px; }}
+QPushButton:hover {{ border-color: {p["accent_hover"]}; }}
+QPushButton#PrimaryButton {{ background: {p["accent"]};
+    color: {p["on_accent"]}; border-color: {p["accent"]}; font-weight: 600; }}
+QPushButton#PrimaryButton:hover {{ background: {p["accent_hover"]}; }}
+QPushButton#SecondaryButton {{ background: {p["surface_alt"]}; }}
+QPushButton#DangerButton {{ background: {p["danger"]}; color: {p["on_accent"]}; }}
+QPushButton:focus, QToolButton:focus {{ border: 2px solid {p["accent_hover"]}; }}
+QPushButton:disabled {{ background: {p["surface_alt"]};
+    color: {p["text_secondary"]}; border-color: {p["border"]}; }}
+QPushButton#ActionCard {{ text-align: left; padding: 20px; }}
+QPushButton#ActionCard[featured="true"] {{ border: 2px solid {p["accent"]};
+    background: {p["surface"]}; }}
+QPushButton#ActionCard:hover {{ background: {p["surface_alt"]}; }}
+QComboBox, QSpinBox, QLineEdit {{ background: {p["surface"]};
+    border: 1px solid {p["border"]}; border-radius: 5px; padding: 6px;
+    selection-background-color: {p["accent"]}; selection-color: {p["on_accent"]}; }}
+QComboBox:focus, QSpinBox:focus, QLineEdit:focus {{ border-color: {p["accent"]}; }}
+QComboBox QAbstractItemView {{ background: {p["surface"]};
+    selection-background-color: {p["accent"]}; selection-color: {p["on_accent"]}; }}
+QTextEdit, QPlainTextEdit, QTextBrowser, QListWidget, QTableView {{
+    background: {p["surface"]}; border: 1px solid {p["border"]};
+    border-radius: 6px; padding: 8px;
+    selection-background-color: {p["accent"]}; selection-color: {p["on_accent"]}; }}
+QListWidget::item {{ padding: 5px; }}
+QHeaderView::section {{ background: {p["surface_alt"]}; padding: 8px; }}
+QTabWidget::pane {{ border: 1px solid {p["border"]}; border-radius: 6px; }}
+QTabBar::tab {{ background: {p["surface_alt"]}; padding: 9px 14px; }}
+QTabBar::tab:selected {{ background: {p["surface"]};
+    border-bottom: 2px solid {p["accent"]}; }}
+QToolButton {{ background: transparent; border: 1px solid transparent;
+    padding: 6px; color: {p["text_secondary"]}; }}
+QToolButton:hover {{ background: {p["surface_alt"]}; }}
+QProgressBar {{ border: 1px solid {p["border"]}; border-radius: 5px;
+    background: {p["surface_alt"]}; text-align: center; min-height: 20px; }}
+QProgressBar::chunk {{ background: {p["accent"]}; border-radius: 4px; }}
+QToolTip {{ background: {p["surface"]}; color: {p["text_primary"]};
+    border: 1px solid {p["border"]}; padding: 8px; }}
+QScrollBar:vertical {{ background: {p["background"]}; width: 12px; }}
+QScrollBar::handle:vertical {{ background: {p["border"]}; min-height: 24px;
+    border-radius: 5px; }}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0px; }}
+QFrame#BoardFrame {{ background: {p["surface_alt"]}; border: none; }}
+QLabel#BoardLightSquare {{ background: {p["board_light"]}; }}
+QLabel#BoardDarkSquare {{ background: {p["board_dark"]}; }}
+QLabel#BoardLastMoveSquare {{ background: #dfc779; }}
+QLabel#BoardSelectedSquare {{ background: #f0d781; border: 2px solid #2e5266; }}
+QLabel#BoardLegalTargetSquare {{ background: #a5cfab; border: 2px solid #37744c; }}
 QLabel#BoardLightSquare, QLabel#BoardDarkSquare, QLabel#BoardLastMoveSquare,
-QLabel#BoardSelectedSquare, QLabel#BoardLegalTargetSquare { color: #101820; }
-QPushButton#SecondaryButton { color: #172033; }
-QTextBrowser, QTableView { background: #ffffff; color: #172033; }
+QLabel#BoardSelectedSquare, QLabel#BoardLegalTargetSquare {{ color: #142331;
+    font-family: "Segoe UI Symbol"; }}
 """
-DARK_THEME_STYLESHEET += """
-QLabel { background: transparent; }
-QTextBrowser { background: #0d1117; color: #f2f5f7; padding: 14px; }
-QProgressBar { border: 1px solid #59708a; border-radius: 5px; text-align: center; }
-QProgressBar::chunk { background: #1f6feb; }
-"""
+
+
+DARK_THEME_STYLESHEET = build_stylesheet(DARK)
+LIGHT_THEME_STYLESHEET = build_stylesheet(LIGHT)
+
+
+def apply_palette(app, theme: str) -> None:
+    from PySide6.QtGui import QColor, QPalette
+
+    colors = LIGHT if theme == "light" else DARK
+    palette = QPalette()
+    for role, token in (
+        (QPalette.ColorRole.Window, "background"),
+        (QPalette.ColorRole.WindowText, "text_primary"),
+        (QPalette.ColorRole.Base, "surface"),
+        (QPalette.ColorRole.AlternateBase, "surface_alt"),
+        (QPalette.ColorRole.Text, "text_primary"),
+        (QPalette.ColorRole.Button, "surface_alt"),
+        (QPalette.ColorRole.ButtonText, "text_primary"),
+        (QPalette.ColorRole.Highlight, "accent"),
+        (QPalette.ColorRole.HighlightedText, "on_accent"),
+        (QPalette.ColorRole.PlaceholderText, "text_secondary"),
+    ):
+        palette.setColor(role, QColor(colors[token]))
+    app.setPalette(palette)

@@ -13,6 +13,7 @@ from adaptive_chess.ui.i18n import set_language
 from adaptive_chess.ui.main_window import MainWindow
 from adaptive_chess.ui.screens.experiments_screen import ExperimentsScreen
 from adaptive_chess.ui.screens.results_screen import ResultsScreen
+from adaptive_chess.ui.theme import LIGHT
 
 
 @pytest.fixture
@@ -61,11 +62,18 @@ def test_theme_language_and_delay_apply_without_losing_campaign(app, monkeypatch
             AppSettings(language="en", theme="light", bot_delay_ms=1700)
         )
         captions = {b.text() for b in window.findChildren(QPushButton)}
-        assert "Play" in captions and "Save settings" in captions
-        assert "#f5f7fb" in app.styleSheet()
+        assert "Save settings" in captions
+        assert any(
+            b.accessibleName() == "Research campaign"
+            for b in window.findChildren(QPushButton)
+        )
+        assert LIGHT["background"] in app.styleSheet()
         assert screen._reply_timer.interval() == 1700
         window._apply_settings(AppSettings())
-        assert "Graj" in {b.text() for b in window.findChildren(QPushButton)}
+        assert any(
+            b.accessibleName() == "Kampania badawcza"
+            for b in window.findChildren(QPushButton)
+        )
         assert window._campaign_screen is screen
     finally:
         window.close()

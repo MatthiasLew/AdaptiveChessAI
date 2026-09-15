@@ -18,8 +18,8 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
+    QScrollArea,
     QSpinBox,
-    QStackedWidget,
     QTabWidget,
     QTextBrowser,
     QVBoxLayout,
@@ -31,9 +31,19 @@ from adaptive_chess.experiments.campaign_tournament import export_campaign, stan
 from adaptive_chess.experiments.research import ResearchCampaign, load_campaign
 from adaptive_chess.learning.agents import KINDS
 from adaptive_chess.ui.experiment_config import get_project_root, writable_root
+from adaptive_chess.ui.help_text import HELP, help_for, method_help
 from adaptive_chess.ui.i18n import tr
 from adaptive_chess.ui.move_builder import get_legal_target_squares
 from adaptive_chess.ui.widgets.chess_board_widget import ChessBoardWidget
+from adaptive_chess.ui.widgets.components import (
+    BoardArea,
+    Disclosure,
+    PageStack,
+    ResponsiveColumns,
+    SectionCard,
+    form_layout,
+    label,
+)
 
 
 class CampaignWorker(QThread):
@@ -51,6 +61,17 @@ class CampaignWorker(QThread):
 
 
 class CampaignScreen(QWidget):
+    def heightForWidth(self, width: int) -> int:
+        current = self._pages.currentWidget()
+        return current.layout().minimumHeightForWidth(max(1, width - 32)) + 32
+
+    def minimumSizeHint(self):
+        from PySide6.QtCore import QSize
+
+        current = self._pages.currentWidget()
+        hint = current.minimumSizeHint()
+        return QSize(hint.width() + 32, hint.height() + 32)
+
     def __init__(self, on_back: Callable[[], None]) -> None:
         super().__init__()
         self.campaign: Campaign | None = None
@@ -94,13 +115,14 @@ class CampaignScreen(QWidget):
         )
         self._status.setWordWrap(True)
         self._board = ChessBoardWidget()
-        self._board.setFixedSize(512, 512)
         self._board.square_clicked.connect(self._click_square)
         self._log = QPlainTextEdit()
         self._log.setReadOnly(True)
 
         root = QVBoxLayout(self)
-        self._pages = QStackedWidget()
+        root.setContentsMargins(16, 16, 16, 16)
+        self._pages = PageStack()
+        self._pages.currentChanged.connect(self.updateGeometry)
         root.addWidget(self._pages)
         self._entry, self._setup, self._play = QWidget(), QWidget(), QWidget()
         for page in (self._entry, self._setup, self._play):
@@ -108,6 +130,7 @@ class CampaignScreen(QWidget):
 
         def button(text, action, layout):
             control = QPushButton(text)
+            control.setObjectName("PrimaryButton")
             if not text.startswith(("Nowa kampania", "Utwórz", "Rozpocznij")):
                 control.setObjectName("SecondaryButton")
             control.clicked.connect(action)
@@ -132,39 +155,69 @@ class CampaignScreen(QWidget):
         self._entry_message.setWordWrap(True)
         entry.addWidget(self._entry_message)
         entry.addStretch()
-        heading.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        heading.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        heading.setWordWrap(True)
         for control in self._entry.findChildren(QPushButton):
-            control.setMinimumWidth(420)
             control.setMaximumWidth(560)
-            entry.setAlignment(control, Qt.AlignmentFlag.AlignHCenter)
+            entry.setAlignment(control, Qt.AlignmentFlag.AlignLeft)
 
         setup = QVBoxLayout(self._setup)
-        title = QLabel("Nowa kampania — ustawienia przed grą")
-        title.setObjectName("SectionTitle")
-        setup.addWidget(title)
-        form = QFormLayout()
-        setup.addLayout(form)
-        for label, widget in (
+        setup.setSpacing(16)
+        setup.addWidget(label("Nowa kampania — ustawienia przed grą", "PageTitle"))
+        basic = SectionCard("Konfiguracja treningu")
+        form = form_layout()
+        basic.body.addLayout(form)
+        for caption, widget in (
             ("Twój pseudonim", self._participant),
             ("Partie na każdego z 4 agentów", self._games),
-            ("Głębokość", self._depth),
-            ("Budżet węzłów / ruch", self._nodes),
-            ("Seed", self._seed),
-            ("Otwarcia UCI (oddziel ;)", self._openings),
         ):
-            form.addRow(label, widget)
+            field_label = label(caption)
+            field_label.setBuddy(widget)
+            form.addRow(field_label, widget)
             self._controls.append(widget)
-        setup.addWidget(
-            QLabel(
-                "Postęp zapisuje się po każdym ruchu. Kolory zmieniają się co rundę."
-            )
+        advanced = SectionCard()
+        advanced_form = form_layout()
+        advanced.body.addLayout(advanced_form)
+        for caption, widget, key in (
+            ("Głębokość", self._depth, "depth"),
+            ("Budżet węzłów / ruch", self._nodes, "nodes"),
+            ("Seed", self._seed, "seed"),
+            ("Otwarcia UCI (oddziel ;)", self._openings, "openings"),
+        ):
+            field_label = label(caption)
+            field_label.setBuddy(widget)
+            help_for(field_label, key)
+            help_for(widget, key)
+            advanced_form.addRow(field_label, widget)
+            self._controls.append(widget)
+        basic.body.addWidget(Disclosure("Parametry zaawansowane", advanced))
+        self._configuration_summary = label("", "StatusBadge")
+        basic.body.addWidget(self._configuration_summary)
+        self._budget_summary = label("")
+        basic.body.addWidget(self._budget_summary)
+        basic.body.addWidget(
+            label("Ocena checkpointów i turniej wymagają dodatkowych gier.")
         )
-        button("Utwórz kampanię i graj…", self._create, setup)
-        button("Wstecz", self.show_entry, setup)
-        self._setup_message = QLabel()
-        self._setup_message.setWordWrap(True)
+        basic.body.addWidget(
+            label("Postęp zapisuje się po każdym ruchu. Kolory zmieniają się co rundę.")
+        )
+        help_for(self._games, "games")
+        methods = SectionCard("Cztery metody")
+        for kind in KINDS:
+            methods.body.addWidget(label(HELP[kind]))
+        methods.body.addStretch()
+        setup.addWidget(ResponsiveColumns(basic, methods))
+        actions = QHBoxLayout()
+        button("Utwórz kampanię i graj…", self._create, actions)
+        button("Wstecz", self.show_entry, actions)
+        setup.addLayout(actions)
+        self._setup_message = label("")
         setup.addWidget(self._setup_message)
         setup.addStretch()
+        for widget in (self._games, self._depth, self._nodes, self._seed):
+            widget.valueChanged.connect(self.refresh_translation)
+        self._eval_agent.currentIndexChanged.connect(self.refresh_translation)
+        self.refresh_translation()
 
         play = QVBoxLayout(self._play)
         play.addWidget(self._progress)
@@ -176,9 +229,12 @@ class CampaignScreen(QWidget):
         play.addWidget(self._status)
         row = QHBoxLayout()
         play.addLayout(row)
-        row.addWidget(self._board)
-        side = QVBoxLayout()
-        row.addLayout(side, 1)
+        row.addWidget(BoardArea(self._board), 3)
+        sidebar = QWidget()
+        sidebar.setMinimumWidth(290)
+        side = QVBoxLayout(sidebar)
+        side.setContentsMargins(0, 0, 0, 0)
+        row.addWidget(sidebar, 2)
         self._resume_button = button("Rozpocznij / wznów partię", self._resume, side)
         self._resign_button = button("Poddaj partię", self._resign, side)
         self._resign_button.setObjectName("DangerButton")
@@ -186,28 +242,57 @@ class CampaignScreen(QWidget):
         side.addWidget(tabs, 1)
         tabs.addTab(self._log, "Ruchy")
         assessment = QWidget()
-        tabs.addTab(assessment, "Ocena i raport")
+        assessment_scroll = QScrollArea()
+        assessment_scroll.setWidgetResizable(True)
+        assessment_scroll.setWidget(assessment)
+        tabs.addTab(assessment_scroll, "Ocena i raport")
         assessment_layout = QVBoxLayout(assessment)
-        evaluation_form = QFormLayout()
+        evaluation_form = form_layout()
+        evaluation_form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapAllRows)
         assessment_layout.addLayout(evaluation_form)
-        for label, widget in (
+        for caption, widget in (
             ("Limit półruchów", self._limit),
             ("Agent kontrolny", self._eval_agent),
             ("Checkpoint", self._eval_checkpoint),
         ):
-            evaluation_form.addRow(label, widget)
+            evaluation_form.addRow(caption, widget)
             self._controls.append(widget)
-        button("Oceń checkpointy / turniej", self._tournament, assessment_layout)
-        button(
+        help_for(self._limit, "limit")
+        help_for(self._eval_checkpoint, "checkpoint")
+        assessment_layout.addWidget(label(HELP["checkpoint"]))
+        evaluation_button = button(
+            "Oceń checkpointy / turniej", self._tournament, assessment_layout
+        )
+        help_for(evaluation_button, "evaluation")
+        control_button = button(
             "Partia kontrolna (bez nauki)", self._human_evaluation, assessment_layout
         )
-        button("Eksportuj raport i partie", self._export, assessment_layout)
+        help_for(control_button, "control")
+        export_button = button(
+            "Eksportuj raport i partie", self._export, assessment_layout
+        )
+        help_for(export_button, "files")
         self._pause = QPushButton("Zatrzymaj ocenę / turniej")
         self._pause.clicked.connect(self.stop_tournament)
         self._pause.setEnabled(False)
         assessment_layout.addWidget(self._pause)
         assessment_layout.addStretch()
         button("Zapisano automatycznie • Wróć", self.show_entry, side)
+
+    def refresh_translation(self) -> None:
+        self._configuration_summary.setText(
+            tr("{games} partii / metodę \u00d7 4 = {total} partii treningowych").format(
+                games=self._games.value(), total=4 * self._games.value()
+            )
+        )
+        self._budget_summary.setText(
+            tr("Głębokość {depth} • Węzły / ruch {nodes} • Seed {seed}").format(
+                depth=self._depth.value(),
+                nodes=self._nodes.value(),
+                seed=self._seed.value(),
+            )
+        )
+        method_help(self._eval_agent)
 
     def show_entry(self) -> None:
         if not self.busy:
@@ -401,7 +486,7 @@ class CampaignScreen(QWidget):
                 ("Goniec", chess.BISHOP),
                 ("Skoczek", chess.KNIGHT),
             ):
-                button = dialog.addButton(name, QMessageBox.ButtonRole.AcceptRole)
+                button = dialog.addButton(tr(name), QMessageBox.ButtonRole.AcceptRole)
                 choices[button] = kind
             dialog.exec()
             selected = choices.get(dialog.clickedButton())
@@ -419,11 +504,12 @@ class CampaignScreen(QWidget):
         campaign = self.campaign
         self._pages.setCurrentWidget(self._play)
         self._result_heading.clear()
+        self._result_heading.hide()
         self._resume_button.setVisible(campaign.session is None)
         self._resign_button.setVisible(campaign.session is not None)
         self._resign_button.setEnabled(campaign.session is not None)
         self._board.setEnabled(campaign.session is not None)
-        self._participant.setText(tr(campaign.data["participant"]))
+        self._participant.setText(campaign.data["participant"])
         self._games.setValue(campaign.data["games_per_agent"])
         self._depth.setValue(campaign.data["depth"])
         if isinstance(campaign, ResearchCampaign):
@@ -450,7 +536,8 @@ class CampaignScreen(QWidget):
             if last:
                 who = "Bot" if last.player_type.value == "bot" else "Ty"
                 move_text = (
-                    f"{who}: {last.san} ({last.move_uci[:2]} → {last.move_uci[2:4]}). "
+                    f"{tr(who)}: {last.san} "
+                    f"({last.move_uci[:2]} → {last.move_uci[2:4]}). "
                 )
             turn = (
                 "Twój ruch."
@@ -458,7 +545,12 @@ class CampaignScreen(QWidget):
                 else "Ruch bota."
             )
             self._status.setText(
-                tr(f"{session.bot_name} • Grasz {color}. {move_text}{turn}")
+                tr("{agent} • Grasz {color}. {move}{turn}").format(
+                    agent=session.bot_name,
+                    color=tr(color),
+                    move=move_text,
+                    turn=tr(turn),
+                )
             )
         else:
             records = campaign.data["completed"] + campaign.data.get(
@@ -487,14 +579,17 @@ class CampaignScreen(QWidget):
                 )
                 if result == "*":
                     heading = "Partia przerwana"
-                self._result_heading.setText(tr(f"{heading} • {result}"))
+                self._result_heading.setText(f"{tr(heading)} • {result}")
+                self._result_heading.show()
                 reason = (
                     "Poddanie partii"
                     if record["termination"] == "resignation"
                     else "Koniec według reguł szachowych"
                 )
                 self._status.setText(
-                    tr(f"{reason}. Wynik zapisany. Obejrzyj ostatnią pozycję.")
+                    tr("{reason}. Wynik zapisany. Obejrzyj ostatnią pozycję.").format(
+                        reason=tr(reason)
+                    )
                 )
                 self._log.setPlainText("\n".join(record["moves"]))
                 self._resume_button.setText(tr("Rozpocznij następną partię"))
@@ -507,7 +602,7 @@ class CampaignScreen(QWidget):
                 self._status.setText(
                     tr(
                         self._status.text()
-                        + " Trening ukończony — otwórz Ocenę i raport."
+                        + tr(" Trening ukończony — otwórz Ocenę i raport.")
                     )
                 )
         tournament = campaign.data["tournament"]

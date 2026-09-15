@@ -1,19 +1,32 @@
 """Local interface catalogue. User data and raw exports are never translated."""
 
-from PySide6.QtWidgets import QAbstractButton, QComboBox, QLabel, QTabWidget, QWidget
+from html import escape
+
+from PySide6.QtWidgets import (
+    QAbstractButton,
+    QComboBox,
+    QLabel,
+    QLineEdit,
+    QPlainTextEdit,
+    QTabWidget,
+    QTextEdit,
+    QWidget,
+)
 
 _language = "pl"
 EN = {
     "Brak zakończonej partii.": "No finished game yet.",
-    "Graj ponownie": "Play again", "Zapisz partię": "Save game",
-    "Końcowy FEN": "Final FEN", "Końcowy materiał": "Final material balance",
-    "Liczba półruchów": "Individual moves", "Podsumowanie partii": "Game summary",
+    "Graj ponownie": "Play again",
+    "Zapisz partię": "Save game",
+    "Końcowy FEN": "Final FEN",
+    "Końcowy materiał": "Final material balance",
+    "Liczba półruchów": "Individual moves",
+    "Podsumowanie partii": "Game summary",
     "Inteligentne szachy. Adaptacyjna nauka. Eksperymenty.": "Chess. Adaptive learning. Experiments.",
     "Kliknij własną figurę, a potem pole docelowe. Po ruchu człowieka bot odpowie automatycznie.": "Click your piece, then its destination. The bot will reply automatically.",
     "Profil, imitacja, TD i kontrola statyczna. 4X partii treningowych.": "Profile, imitation, TD and static control. 4X training games.",
     "Utwórz kampanię albo wczytaj zapisany plik.": "Create a campaign or load a saved file.",
     "Wybierz ustawienia i kliknij „Nowa gra”.": "Choose your settings and click New game.",
-
     "Losowy": "Random",
     "Statyczny": "Static",
     "Adaptacyjny": "Adaptive",
@@ -82,12 +95,12 @@ EN = {
     "Rozpocznij / wznów partię": "Start / resume game",
     "Poddaj partię": "Resign",
     "Ruchy": "Moves",
-    "Ocena i raport": "Evaluation and report",
-    "Limit półruchów": "Maximum individual moves",
+    "Ocena i raport": "Evaluation",
+    "Limit półruchów": "Half-move limit",
     "Agent kontrolny": "Evaluation agent",
     "Checkpoint": "Saved model",
-    "Oceń checkpointy / turniej": "Evaluate models / tournament",
-    "Partia kontrolna (bez nauki)": "Evaluation game (learning disabled)",
+    "Oceń checkpointy / turniej": "Evaluate / tournament",
+    "Partia kontrolna (bez nauki)": "Control game (no learning)",
     "Eksportuj raport i partie": "Export report and games",
     "Zatrzymaj ocenę / turniej": "Stop evaluation / tournament",
     "Zapisano automatycznie • Wróć": "Saved automatically • Back",
@@ -194,6 +207,117 @@ EN = {
     "Liczba ruchów": "Moves played",
 }
 
+EN.update(
+    {
+        "Kampania badawcza": "Research campaign",
+        "Graj, ucz i porównuj.": "Play, train and compare.",
+        "Pracownia adaptacyjnych agentów szachowych": "Adaptive chess research workspace",
+        "Trenuj cztery metody na swoich partiach. Wznawiaj zapis i oceniaj checkpointy.": "Train four methods on your games. Resume a campaign and evaluate checkpoints.",
+        "Zagraj z wybranym botem poza kampanią.": "Play against a bot outside the research campaign.",
+        "Uruchom automatyczne porównania botów.": "Run automated bot comparisons.",
+        "Przejrzyj podsumowania, wykresy i tabele badań.": "Explore research summaries, charts and tables.",
+        "Konfiguracja treningu": "Training configuration",
+        "Parametry zaawansowane": "Advanced parameters",
+        "Plan kampanii": "Campaign plan",
+        "{games} partii / metodę \u00d7 4 = {total} partii treningowych": "{games} games / method \u00d7 4 = {total} training games",
+        "Głębokość {depth} • Węzły / ruch {nodes} • Seed {seed}": "Depth {depth} • Nodes / move {nodes} • Seed {seed}",
+        "Ocena checkpointów i turniej wymagają dodatkowych gier.": "Checkpoint evaluation and the tournament require additional games.",
+        "Cztery metody": "Four methods",
+        "Gra": "Game",
+        "Badania / pliki": "Research / files",
+        "Bieżąca partia": "Current game",
+        "Pozycja techniczna": "Technical position",
+        "Raporty i pliki": "Reports and files",
+        "Rozkład wyników": "Outcome distribution",
+        "Wczytaj folder, aby zobaczyć statystyki.": "Load a folder to see statistics.",
+        "Pełny zestaw: cztery porównania botów.": "Full suite: four bot comparisons.",
+        "Losowy punkt odniesienia: obie strony wybierają losowe ruchy.": "Random baseline: both sides choose random moves.",
+        "Stałe przeszukiwanie kontra losowe ruchy.": "Fixed search against random moves.",
+        "Bot adaptacyjny kontra losowy punkt odniesienia.": "Adaptive bot against the random baseline.",
+        "Bot adaptacyjny kontra bot ze stałą oceną.": "Adaptive bot against a bot with fixed evaluation.",
+        "Badanie uczenia z Twoich partii rozpoczniesz w Kampanii badawczej.": "Start a Research campaign to study learning from your games.",
+        "Zakończenie i zapis": "Finish and save",
+        "Raport prezentuje do 200 wierszy; pełne dane są dostępne w plikach technicznych.": "Reports show up to 200 rows; full data is available in technical files.",
+        "Liczba półruchów przewidywanych w przeszukiwaniu. Większa głębokość wydłuża obliczenia; budżet węzłów może zakończyć je wcześniej.": "Number of individual moves searched ahead. Greater depth takes longer; the node budget may end the search earlier.",
+        "Budżet odwiedzonych pozycji na jeden ruch agenta. Wspólny limit pomaga porównywać metody przy tym samym budżecie obliczeń.": "Budget of visited positions per agent move. A shared limit helps compare methods with the same computation budget.",
+        "Ziarno generatora losowego. Zachowaj tę samą wartość i konfigurację, aby odtworzyć warunki badania; samo ziarno nie gwarantuje identycznego czasu wykonania.": "Random generator seed. Keep the same value and configuration to reproduce research conditions; the seed alone does not guarantee identical running time.",
+        "Liczba partii treningowych człowieka z każdą metodą. Cztery metody oznaczają łącznie 4 \u00d7 tę wartość. Ocena i turniej to dodatkowe gry.": "Human training games per method. Four methods mean 4 \u00d7 this value in total. Evaluation and tournament games are additional.",
+        "Stan modelu po danej liczbie partii treningowych. 0 oznacza stan przed nauką. Wybierz istniejący checkpoint; ocena nie aktualizuje modelu.": "Model state after this many training games. 0 is the state before learning. Select an existing checkpoint; evaluation does not update the model.",
+        "Adaptive: buduje profil ruchów przeciwnika i używa go do korekty wyboru ruchów.": "Adaptive: builds an opponent move profile and uses it to adjust move selection.",
+        "Imitation: uczy ranking legalnych ruchów na podstawie ruchów człowieka. Naśladuje wybory, nie oceny silnika.": "Imitation: learns a ranking of legal moves from human moves. It imitates choices, not engine evaluations.",
+        "TD: aktualizuje ocenę pozycji na podstawie kolejnych pozycji i wyniku partii (temporal difference).": "TD: updates position evaluation from successive positions and game results (temporal difference).",
+        "Static: punkt odniesienia ze stałą oceną pozycji. Nie uczy się podczas kampanii.": "Static: a baseline with fixed position evaluation. It does not learn during the campaign.",
+        "Ocena porównuje zapisane checkpointy bez dalszej nauki. Turniej zestawia zamrożonych agentów. Gry obejmują pary kolorów; wyniki nie zmieniają treningu.": "Evaluation compares saved checkpoints without further learning. The tournament pairs frozen agents. Games include both colors; results do not change training.",
+        "Grasz z wybraną metodą i istniejącym checkpointem bez aktualizacji modelu. Najpierw dokończ aktywną partię.": "Play against the selected method and an existing checkpoint without updating the model. Finish the active game first.",
+        "Jeden półruch to ruch jednej strony. 200 półruchów to do 100 pełnych ruchów. Partia przerwana limitem nie jest automatycznie remisem.": "One half-move is one move by one side. 200 half-moves allow up to 100 full moves. Reaching the limit does not automatically mean a draw.",
+        "Ruchy w notacji UCI, np. e2e4 e7e5. Oddziel otwarcia średnikiem. Pusty fragment oznacza pozycję początkową. Zachowaj zestaw przy porównywaniu badań.": "UCI moves, e.g. e2e4 e7e5. Separate openings with semicolons. An empty segment means the initial position. Keep the same set when comparing studies.",
+        "CSV zawiera tabele do dalszej analizy, JSON dane i konfigurację, PGN zapis partii. Plik SQLite przechowuje kampanię potrzebną do wznowienia.": "CSV contains tables for analysis, JSON data and configuration, PGN game moves. SQLite stores the campaign needed to resume.",
+        "Wyniki dotyczą wczytanego folderu. Sprawdź liczbę partii, checkpoint, pary kolorów i przerwania limitem przed porównaniem metod. Przewaga materiału nie jest wynikiem partii.": "Results cover the loaded folder. Check game count, checkpoint, color pairs and move-limit stops before comparing methods. Material advantage is not a game result.",
+        "Liczba gier w wybranym porównaniu. Pełny zestaw uruchamia cztery porównania, każde z taką liczbą gier.": "Games in the selected comparison. The full suite runs four comparisons, each with this many games.",
+        "FEN opisuje pozycję, stronę na ruchu, roszady i liczniki. Służy do odtwarzania pozycji; nie zawiera pełnej historii partii.": "FEN describes the position, side to move, castling rights and counters. It can restore a position but does not contain the full move history.",
+    }
+)
+
+
+EN.update(
+    {
+        "Pseudonim uczestnika": "Participant nickname",
+        "Wybrano figurę na polu {square}.": "Selected the piece on {square}.",
+        "{agent} • Grasz {color}. {move}{turn}": "{agent} • You play {color}. {move}{turn}",
+        "białymi": "white",
+        "czarnymi": "black",
+        "białe": "white",
+        "czarne": "black",
+        "Ty": "You",
+        "gracz": "you",
+        "bot": "bot",
+        "{reason}. Wynik zapisany. Obejrzyj ostatnią pozycję.": "{reason}. Result saved. Review the final position.",
+        " Trening ukończony — otwórz Ocenę i raport.": " Training complete — open Evaluation and report.",
+        "Wczytano raporty: {count} plików.": "Loaded reports: {count} files.",
+        "Folder nie istnieje: {folder}": "Folder does not exist: {folder}",
+        "Wygrana białych": "White wins",
+        "Wygrana czarnych": "Black wins",
+        "Partia bez rozstrzygnięcia": "Unfinished game",
+        "Równy materiał": "Equal material",
+        "Gracz poddał partię.": "Player resigned.",
+        "Hetman": "Queen",
+        "Wieża": "Rook",
+        "Goniec": "Bishop",
+        "Skoczek": "Knight",
+        "Promocja": "Promotion",
+        "Wybierz figurę": "Choose a piece",
+        "Ocena zakończona. Raport zapisany obok kampanii.": "Evaluation complete. Report saved beside the campaign.",
+        "Turniej zamrożonych agentów. Zapis po każdej partii.": "Frozen-agent tournament. Saved after every game.",
+        "Raport badania": "Research report",
+    }
+)
+
+
+EN.update(
+    {
+        "Agent": "Agent",
+        "Na ruchu białe.": "White to move.",
+        "Na ruchu czarne.": "Black to move.",
+        "Na ruchu białe. Szach.": "White to move. Check.",
+        "Na ruchu czarne. Szach.": "Black to move. Check.",
+        "Mat. Wygrywają białe.": "Checkmate. Winner: White.",
+        "Mat. Wygrywają czarne.": "Checkmate. Winner: Black.",
+        "Remis przez pat.": "Draw by stalemate.",
+        "Remis: niewystarczający materiał.": "Draw by insufficient material.",
+        "Koniec partii. Wynik: {result}.": "Game over. Result: {result}.",
+        "Białe +{value}": "White +{value}",
+        "Czarne +{value}": "Black +{value}",
+    }
+)
+
+
+EN.update(
+    {
+        "Uruchamiaj na pełnym ekranie": "Start in fullscreen",
+        "F11 przełącza pełny ekran, Esc wraca do okna.": "F11 toggles fullscreen, Esc returns to the window.",
+    }
+)
+
 
 def set_language(language: str) -> None:
     global _language
@@ -224,6 +348,25 @@ def _caption(widget: QWidget, key: str, current: str) -> str:
 def localize(root: QWidget) -> None:
     """Translate widget captions in place, preserving data and selections."""
     for widget in [root, *root.findChildren(QWidget)]:
+        help_source = widget.property("help_source")
+        if help_source:
+            widget.setToolTip("<p>" + escape(tr(help_source)) + "</p>")
+        elif widget.toolTip():
+            widget.setToolTip(_caption(widget, "tooltip_pair", widget.toolTip()))
+        for key, getter, setter in (
+            ("accessible_name_pair", widget.accessibleName, widget.setAccessibleName),
+            (
+                "accessible_description_pair",
+                widget.accessibleDescription,
+                widget.setAccessibleDescription,
+            ),
+        ):
+            if getter():
+                setter(_caption(widget, key, getter()))
+        if isinstance(widget, (QLineEdit, QPlainTextEdit, QTextEdit)):
+            widget.setPlaceholderText(
+                _caption(widget, "placeholder_pair", widget.placeholderText())
+            )
         if isinstance(widget, (QLabel, QAbstractButton)):
             widget.setText(_caption(widget, "translation_pair", widget.text()))
         if isinstance(widget, (QComboBox, QTabWidget)):
@@ -238,3 +381,43 @@ def localize(root: QWidget) -> None:
                     widget.setItemText(index, rendered)
                 else:
                     widget.setTabText(index, rendered)
+
+    for widget in [root, *root.findChildren(QWidget)]:
+        refresh = getattr(widget, "refresh_translation", None)
+        if callable(refresh):
+            refresh()
+
+
+def game_status(text: str) -> str:
+    """Localize the backend's status without changing its protocol or output."""
+    reverse = {value: source for source, value in EN.items()}
+    if text.startswith("Game over. Result: "):
+        result = text.removeprefix("Game over. Result: ").removesuffix(".")
+        return tr("Koniec partii. Wynik: {result}.").format(result=result)
+    return tr(reverse.get(text, text))
+
+
+EN.update(
+    {
+        "Przewidywanie przeciwnika": "Opponent lookahead",
+        "1 — Szybkie": "1 — Fast",
+        "2 — Umiarkowane": "2 — Moderate",
+        "3 — Dokładne": "3 — Detailed",
+        "4 — Najgłębsze": "4 — Deepest",
+        "RandomBot wybiera losowe legalne ruchy. "
+        "Poziom przewidywania nie wpływa na jego grę.": "RandomBot picks random legal moves. Lookahead has no effect on its play.",
+        "Zakres 1-4: tyle półruchów bot analizuje w przód. "
+        "1 jest najszybsze, 4 analizuje najgłębiej i może długo liczyć. "
+        "Większa głębokość zwykle pomaga, ale nie gwarantuje wygranej. "
+        "To nie jest ranking Elo.": "Range 1-4: the number of half-moves the bot looks ahead. "
+        "1 is fastest; 4 searches deepest and may take a long time. "
+        "Greater depth usually helps but does not guarantee a win. This is not an Elo rating.",
+        "Końcowa pozycja": "Final position",
+        "Pomoc dotycząca parametru": "Parameter help",
+        "Mat: zaznaczony król jest szachowany. Legalne odpowiedzi: 0. "
+        "Nie można uciec królem, zbić szachującej figury ani zasłonić szacha.": "Checkmate: the highlighted king is in check. Legal replies: 0. "
+        "There is no king escape, capture of the checking piece, or way to block the check.",
+        "Pat: król nie jest szachowany, ale strona na ruchu nie ma legalnego ruchu. To remis.": "Stalemate: the king is not in check, but the side to move has no legal move. A draw.",
+        "Końcowa pozycja do obejrzenia. Powód zakończenia podano przy wyniku.": "Final position for inspection. The reason the game ended is shown beside the result.",
+    }
+)

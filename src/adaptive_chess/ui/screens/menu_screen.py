@@ -1,8 +1,7 @@
 from collections.abc import Callable
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QLabel,
+    QHBoxLayout,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -35,53 +34,68 @@ class MenuScreen(QWidget):
         self._build_ui()
 
     def _build_ui(self) -> None:
-        layout = QVBoxLayout()
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.setSpacing(14)
+        from adaptive_chess.ui.widgets.components import (
+            ActionCard,
+            ResponsiveColumns,
+            label,
+        )
 
-        title = QLabel("AdaptiveChessAI")
-        title.setObjectName("TitleLabel")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        subtitle = QLabel("Inteligentne szachy. Adaptacyjna nauka. Eksperymenty.")
-        subtitle.setObjectName("SubtitleLabel")
-        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        play_button = QPushButton("Gra swobodna")
-        experiments_button = QPushButton("Eksperymenty")
-        results_button = QPushButton("Wyniki")
-        settings_button = QPushButton("Ustawienia")
-        exit_button = QPushButton("Wyjście")
-        exit_button.setObjectName("DangerButton")
-
-        for button in (
-            play_button,
-            experiments_button,
-            results_button,
-            settings_button,
-            exit_button,
-        ):
-            button.setFixedWidth(280)
-
-        play_button.clicked.connect(self._on_play_clicked)
-        experiments_button.clicked.connect(self._on_experiments_clicked)
-        results_button.clicked.connect(self._on_results_clicked)
-        settings_button.clicked.connect(self._on_settings_clicked)
-        exit_button.clicked.connect(self._on_exit_clicked)
-
-        layout.addWidget(title)
-        layout.addWidget(subtitle)
-        layout.addSpacing(22)
-        alignment = Qt.AlignmentFlag.AlignCenter
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(24, 24, 24, 24)
+        content = QWidget()
+        content.setMaximumWidth(1060)
+        outer.addStretch(1)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        row.addWidget(content, 10)
+        row.addStretch(1)
+        outer.addLayout(row)
+        outer.addStretch(1)
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(12)
+        layout.addSpacing(8)
+        layout.addWidget(label("AdaptiveChessAI", "PageTitle"))
+        layout.addWidget(label("Pracownia adaptacyjnych agentów szachowych"))
+        layout.addSpacing(8)
         if self._on_campaign_clicked is not None:
-            campaign_button = QPushButton("Graj")
-            campaign_button.setFixedWidth(280)
-            campaign_button.clicked.connect(self._on_campaign_clicked)
-            layout.addWidget(campaign_button, alignment=alignment)
-        layout.addWidget(play_button, alignment=alignment)
-        layout.addWidget(experiments_button, alignment=alignment)
-        layout.addWidget(results_button, alignment=alignment)
-        layout.addWidget(settings_button, alignment=alignment)
-        layout.addWidget(exit_button, alignment=alignment)
-
-        self.setLayout(layout)
+            layout.addWidget(
+                ActionCard(
+                    "Kampania badawcza",
+                    "Trenuj cztery metody na swoich partiach. "
+                    "Wznawiaj zapis i oceniaj checkpointy.",
+                    self._on_campaign_clicked,
+                    featured=True,
+                )
+            )
+        layout.addWidget(
+            ResponsiveColumns(
+                ActionCard(
+                    "Gra swobodna",
+                    "Zagraj z wybranym botem poza kampanią.",
+                    self._on_play_clicked,
+                ),
+                ActionCard(
+                    "Eksperymenty",
+                    "Uruchom automatyczne porównania botów.",
+                    self._on_experiments_clicked,
+                ),
+                ActionCard(
+                    "Wyniki",
+                    "Przejrzyj podsumowania, wykresy i tabele badań.",
+                    self._on_results_clicked,
+                ),
+                breakpoint=600,
+            )
+        )
+        footer = QHBoxLayout()
+        for text, action in (
+            ("Ustawienia", self._on_settings_clicked),
+            ("Wyjście", self._on_exit_clicked),
+        ):
+            button = QPushButton(text)
+            button.setObjectName("SecondaryButton")
+            button.clicked.connect(action)
+            footer.addWidget(button)
+        footer.addStretch()
+        layout.addLayout(footer)

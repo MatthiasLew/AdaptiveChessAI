@@ -103,8 +103,20 @@ class ChessBoardWidget(QFrame):
         self._build_squares()
         self.set_board(self._board)
 
-    def set_board(self, board: chess.Board) -> None:
-        self._last_move = board.peek() if board.move_stack else None
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        pixels = max(20, int((min(self.width(), self.height()) - 20) / 8 * 0.65))
+        for label in self._square_labels.values():
+            font = label.font()
+            font.setPixelSize(pixels)
+            label.setFont(font)
+            label.setStyleSheet(f"font-size: {pixels}px;")
+
+    def set_board(
+        self, board: chess.Board, *, last_move: chess.Move | None = None
+    ) -> None:
+        """Display a position; an exported FEN may supply its last move separately."""
+        self._last_move = last_move or (board.peek() if board.move_stack else None)
         self._board = board.copy(stack=False)
         self._refresh_pieces()
         self._refresh_square_styles()
@@ -138,7 +150,7 @@ class ChessBoardWidget(QFrame):
         for square in chess.SQUARES:
             label = BoardSquareLabel(square)
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            label.setMinimumSize(48, 48)
+            label.setMinimumSize(32, 32)
             label.setSizePolicy(
                 QSizePolicy.Policy.Expanding,
                 QSizePolicy.Policy.Expanding,
