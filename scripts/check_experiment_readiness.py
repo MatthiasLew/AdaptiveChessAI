@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 
 REQUIRED_DIRS = (
@@ -256,8 +257,10 @@ def run_command(
     print(" ".join(command))
     print()
 
+    from adaptive_chess.ui.experiment_config import subprocess_command
+
     subprocess.run(
-        command,
+        subprocess_command(command),
         cwd=project_root,
         check=True,
     )

@@ -11,3 +11,11 @@ Stan aktywnej gry zawiera profil sprzed partii i ruchy UCI. Wznowienie odtwarza 
 `campaign_tournament` tworzy stały harmonogram par i kolorów. GUI uruchamia skrypt w QProcess. Każda partia wczytuje osobne boty z checkpointów, adaptive ma `training=False`; profile są porównywane przed i po meczu. Wyniki zatwierdza się po całej partii. Zatrzymana partia jest rozgrywana ponownie przy wznowieniu. Zmiana kodu aplikacji lub wersji środowiska blokuje wznowienie turnieju, aby nie mieszać wyników.
 
 Starsze `GameScreen`, `ExperimentsScreen` i skrypty serii pozostają kompatybilne i nie modyfikują kampanii. Bazy SQLite są lokalne i ignorowane przez Git.
+
+## Rozszerzenie czterech metod (15 września 2026)
+
+`ResearchCampaign` rozszerza trwały zapis o historie modeli czterech metod i oddzielne gry kontrolne. `load_campaign` rozpoznaje stary/nowy protokół. `ResearchAgent` realizuje wspólne wyszukiwanie z limitem węzłów i odrębne aktualizacje profilu, imitacji oraz TD. Checkpoint 0 i każdy następny pozostają dostępne.
+
+`research_evaluation` ocenia checkpointy przeciw zamrożonej kontroli, a następnie końcowy round robin. `research_report` generuje krzywe i surowe eksporty. Faza oceny nie modyfikuje modeli; integralność i zgodność środowiska są sprawdzane przy wznowieniu. `GameScreen` także korzysta z workera; `MainWindow` chroni żywe wątki przed zamknięciem oraz udostępnia przewijanie ekranów.
+
+`python -m adaptive_chess` i pakiet desktopowy mają ten sam dispatcher GUI/turnieju/skryptów. PyInstaller dołącza stare skrypty i manifest wersji; pliki użytkownika w wersji spakowanej trafiają do zapisywalnej lokalizacji użytkownika. CI sprawdza Windows/Linux, a artefakt desktopowy buduje na Windows.

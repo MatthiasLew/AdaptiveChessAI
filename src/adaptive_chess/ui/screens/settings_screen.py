@@ -1,6 +1,7 @@
 from collections.abc import Callable
 
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFrame,
     QGridLayout,
@@ -17,6 +18,7 @@ from adaptive_chess.ui.app_settings import (
     AppSettingsStore,
 )
 from adaptive_chess.ui.bot_factory import BotKind
+from adaptive_chess.ui.i18n import tr
 
 
 class SettingsScreen(QWidget):
@@ -36,6 +38,19 @@ class SettingsScreen(QWidget):
         self._on_back_to_menu_clicked = on_back_to_menu_clicked
         self._on_settings_saved = on_settings_saved
 
+        self._language_combo = QComboBox()
+        self._language_combo.addItem("Polski", "pl")
+        self._language_combo.addItem("English", "en")
+        self._theme_combo = QComboBox()
+        self._theme_combo.addItem("Ciemny", "dark")
+        self._theme_combo.addItem("Jasny", "light")
+        self._fullscreen = QCheckBox(
+            "Uruchamiaj na pełnym ekranie (F11 przełącza, Esc wraca do okna)"
+        )
+        self._delay = QSpinBox()
+        self._delay.setRange(300, 3000)
+        self._delay.setSingleStep(100)
+        self._delay.setSuffix(" ms")
         self._bot_combo = QComboBox()
         self._color_combo = QComboBox()
         self._depth_spinbox = QSpinBox()
@@ -57,8 +72,12 @@ class SettingsScreen(QWidget):
             settings.default_human_color,
         )
 
+        self._set_combo_by_data(self._language_combo, settings.language)
+        self._set_combo_by_data(self._theme_combo, settings.theme)
+        self._fullscreen.setChecked(settings.fullscreen)
+        self._delay.setValue(settings.bot_delay_ms)
         self._depth_spinbox.setValue(settings.default_depth)
-        self._experiment_output_edit.setText(settings.default_experiment_output_dir)
+        self._experiment_output_edit.setText(tr(settings.default_experiment_output_dir))
 
     def _build_ui(self) -> None:
         root_layout = QVBoxLayout()
@@ -97,16 +116,23 @@ class SettingsScreen(QWidget):
         layout.addWidget(QLabel("Domyślny kolor gracza"), 1, 0)
         layout.addWidget(self._color_combo, 1, 1)
 
-        layout.addWidget(QLabel("Domyślny depth"), 2, 0)
+        layout.addWidget(QLabel("Siła przewidywania ruchów"), 2, 0)
         layout.addWidget(self._depth_spinbox, 2, 1)
 
         layout.addWidget(QLabel("Domyślny folder eksperymentów"), 3, 0)
         layout.addWidget(self._experiment_output_edit, 3, 1)
 
-        layout.addWidget(save_button, 4, 0, 1, 2)
-        layout.addWidget(reset_button, 5, 0, 1, 2)
-        layout.addWidget(back_button, 6, 0, 1, 2)
-        layout.addWidget(self._status_label, 7, 0, 1, 2)
+        layout.addWidget(QLabel("Język interfejsu"), 4, 0)
+        layout.addWidget(self._language_combo, 4, 1)
+        layout.addWidget(QLabel("Wygląd"), 5, 0)
+        layout.addWidget(self._theme_combo, 5, 1)
+        layout.addWidget(self._fullscreen, 6, 0, 1, 2)
+        layout.addWidget(QLabel("Pauza przed ruchem bota"), 7, 0)
+        layout.addWidget(self._delay, 7, 1)
+        layout.addWidget(save_button, 8, 0, 1, 2)
+        layout.addWidget(reset_button, 9, 0, 1, 2)
+        layout.addWidget(back_button, 10, 0, 1, 2)
+        layout.addWidget(self._status_label, 11, 0, 1, 2)
 
         panel.setLayout(layout)
 
@@ -140,10 +166,14 @@ class SettingsScreen(QWidget):
         output_dir = self._experiment_output_edit.text().strip()
 
         if not output_dir:
-            self._status_label.setText("Folder eksperymentów nie może być pusty.")
+            self._status_label.setText(tr("Folder eksperymentów nie może być pusty."))
             return
 
         settings = AppSettings(
+            language=self._language_combo.currentData(),
+            theme=self._theme_combo.currentData(),
+            fullscreen=self._fullscreen.isChecked(),
+            bot_delay_ms=self._delay.value(),
             default_bot=self._bot_combo.currentData(),
             default_human_color=self._color_combo.currentData(),
             default_depth=self._depth_spinbox.value(),
@@ -153,7 +183,7 @@ class SettingsScreen(QWidget):
         self._settings_store.save(settings)
         self._on_settings_saved(settings)
 
-        self._status_label.setText("Ustawienia zapisane.")
+        self._status_label.setText(tr("Ustawienia zapisane."))
 
     def _restore_defaults(self) -> None:
         defaults = AppSettings()
@@ -166,11 +196,15 @@ class SettingsScreen(QWidget):
             self._color_combo,
             defaults.default_human_color,
         )
+        self._set_combo_by_data(self._language_combo, defaults.language)
+        self._set_combo_by_data(self._theme_combo, defaults.theme)
+        self._fullscreen.setChecked(defaults.fullscreen)
+        self._delay.setValue(defaults.bot_delay_ms)
         self._depth_spinbox.setValue(defaults.default_depth)
-        self._experiment_output_edit.setText(defaults.default_experiment_output_dir)
+        self._experiment_output_edit.setText(tr(defaults.default_experiment_output_dir))
 
         self._status_label.setText(
-            "Przywrócono wartości domyślne. Kliknij „Zapisz ustawienia”."
+            tr("Przywrócono wartości domyślne. Kliknij „Zapisz ustawienia”.")
         )
 
     @staticmethod

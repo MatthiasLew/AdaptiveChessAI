@@ -73,6 +73,10 @@ def make_entrant(campaign: Campaign, name: str) -> BaseBot:
 
 def run_tournament(path: str | Path, max_half_moves: int = 200) -> None:
     campaign = Campaign(path)
+    if "research" in campaign.data:
+        from adaptive_chess.experiments.research_evaluation import run_research
+        run_research(path, max_half_moves)
+        return
     tournament = prepare_tournament(campaign, max_half_moves)
     if tournament["environment"] != environment_metadata():
         raise ValueError("Kod lub środowisko zmieniły się od rozpoczęcia turnieju.")
@@ -121,6 +125,7 @@ def run_tournament(path: str | Path, max_half_moves: int = 200) -> None:
 
 
 def standings(campaign: Campaign) -> list[dict]:
+    entrants = campaign.data.get("research", {}).get("agents", ENTRANTS)
     rows: dict[str, dict[str, Any]] = {
         name: {
             "agent": name,
@@ -131,7 +136,7 @@ def standings(campaign: Campaign) -> list[dict]:
             "unfinished": 0,
             "points": 0.0,
         }
-        for name in ENTRANTS
+        for name in entrants
     }
     tournament = campaign.data["tournament"]
     for game in tournament["results"] if tournament else []:
@@ -152,6 +157,10 @@ def standings(campaign: Campaign) -> list[dict]:
 
 
 def export_campaign(campaign: Campaign) -> Path:
+    if "research" in campaign.data:
+        from adaptive_chess.analysis.research_report import export_research
+        from adaptive_chess.experiments.research import ResearchCampaign
+        return export_research(ResearchCampaign(campaign.path))
     output = campaign.path.parent / f"{campaign.path.stem}_report"
     output.mkdir(exist_ok=True)
     (output / "campaign.json").write_text(

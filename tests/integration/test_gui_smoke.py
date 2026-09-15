@@ -1,4 +1,5 @@
 import os
+import time
 
 # Qt nie potrzebuje prawdziwego monitora podczas testów.
 # Musi być ustawione przed importem PySide6.
@@ -86,8 +87,8 @@ def test_application_starts_on_menu(main_window):
     ],
 )
 def test_all_registered_screens_can_be_opened(
-    main_window,
-    screen_name,
+        main_window,
+        screen_name,
 ):
     """
     Sprawdza całą nawigację aplikacji.
@@ -110,7 +111,7 @@ def test_saved_settings_are_applied_to_game_screen(main_window):
 
 
 def test_saved_output_directory_is_applied_to_experiments_screen(
-    main_window,
+        main_window,
 ):
     experiments_screen = main_window._experiments_screen
 
@@ -142,7 +143,7 @@ def test_random_game_can_be_started_from_gui(main_window):
 
 
 def test_human_move_and_bot_response_work_through_game_screen(
-    main_window,
+        main_window,
 ):
     """
     Testuje połączenie:
@@ -165,6 +166,11 @@ def test_human_move_and_bot_response_work_through_game_screen(
 
     # Kliknięcie pola e4.
     game_screen._on_board_square_clicked(chess.E4)
+    deadline = time.monotonic() + 10
+    while game_screen.thinking and time.monotonic() < deadline:
+        QApplication.processEvents()
+        time.sleep(0.005)
+    assert not game_screen.thinking
 
     session = game_screen._session
 
@@ -221,3 +227,38 @@ def test_play_again_returns_to_clean_game_screen(main_window):
     assert game_screen._session is None
 
     assert game_screen._history_list.count() == 0
+
+
+def test_freeplay_runs_off_gui_thread_and_guards_close(main_window, monkeypatch):
+    import threading
+
+    from PySide6.QtGui import QCloseEvent
+    main_window.start_new_game_flow()
+    screen = main_window._game_screen
+    screen._start_new_game()
+    release = threading.Event()
+    threads = []
+    original = screen._session._bot.choose_move
+
+    def slow_move(board):
+        threads.append(threading.get_ident())
+        assert release.wait(5)
+        return original(board)
+
+    monkeypatch.setattr(screen._session._bot, "choose_move", slow_move)
+    try:
+        screen._on_board_square_clicked(chess.E2)
+        screen._on_board_square_clicked(chess.E4)
+        assert screen.thinking
+        event = QCloseEvent()
+        main_window.closeEvent(event)
+        assert not event.isAccepted()
+    finally:
+        release.set()
+        deadline = time.monotonic() + 10
+        while screen.thinking and time.monotonic() < deadline:
+            QApplication.processEvents()
+            time.sleep(0.005)
+    assert not screen.thinking
+    assert threads and threads[0] != threading.get_ident()
+    assert len(screen._session.get_move_history()) == 2

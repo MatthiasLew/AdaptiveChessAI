@@ -14,22 +14,13 @@ python -m venv venv
 
 ## Kampania badawcza
 
-W menu wybierz **Kampania badawcza**. Utwórz plik kampanii, podaj pseudonim, liczbę partii na agenta i głębokość. Przycisk **Rozpocznij / wznów partię** prowadzi przez naprzemienne gry z AdaptiveMinimax i StaticMinimax. Kolory zmieniają się co rundę. Static jest kontrolą i nie uczy się.
+W menu wybierz **Graj**, a następnie **Nowa kampania** albo **Wczytaj kampanię…**. Ustal X partii na metodę i budżet wyszukiwania. Zagraj 4X partii: z agentem profilowym, imitacją, TD i kontrolą statyczną. Autosave pozwala wrócić do gry po restarcie.
 
-Każdy ruch zapisuje się automatycznie w SQLite. Po ponownym uruchomieniu wczytaj ten sam plik kampanii i wznów partię. Po zakończeniu treningu uruchom turniej: Static, Adaptive przed treningiem i Adaptive po treningu. Modele w turnieju nie uczą się. Raport Markdown, tabela CSV, dane JSON i partie PGN zapisują się obok pliku kampanii.
+**Oceń checkpointy / turniej** porównuje wszystkie zapisane modele ze stałą kontrolą, a po treningu rozgrywa turniej czterech metod (domyślnie 36 meczów). Osobne partie kontrolne przeciw człowiekowi nie uczą agentów. Raport zawiera krzywe uczenia, przedziały, koszty obliczeń i eksport CSV/JSON/PGN.
 
-[Instrukcja kampanii](docs/campaign.md) · [Lista dalszych prac](docs/TODO.md) · [Architektura](docs/architecture.md)
+[Instrukcja i protokół badania](docs/campaign.md) · [Stan zadań](docs/TODO.md) · [Architektura](docs/architecture.md) · [Paczka Windows](docs/desktop.md)
 
-## Aktualny zakres
-
-- GUI z grą swobodną, kampanią, eksperymentami, wynikami i ustawieniami.
-- Reguły python-chess, RandomBot, StaticMinimaxBot i AdaptiveMinimaxBot.
-- Trwały profil przeciwnika **w kampanii**, checkpoint po każdej ukończonej partii Adaptive.
-- W kampanii: ruch bota w tle, promocja, poddanie, automatyczny zapis i wznowienie.
-- Turniej 18 partii na trzech otwarciach, ze zmianą kolorów i zapisem po każdej partii.
-- Dotychczasowe skrypty bot–bot, CSV/JSON, statystyki i wykresy.
-
-Gra swobodna oraz starsze skrypty eksperymentów pozostają oddzielnymi trybami; nie trenują zapisanych agentów kampanii. Metody imitacji i TD oraz krzywe uczenia są w planie. Obecny adaptive to adaptacja heurystyczna, nie model neuronowy.
+Metody imitacji i TD są małymi modelami liniowymi ze wspólną oceną szachową. To platforma do pomiaru skuteczności, nie obietnica, że uczenie pokona gracza. Przewaga nad człowiekiem wymaga rzeczywistych partii kontrolnych.
 
 ## Testy
 
@@ -48,3 +39,11 @@ Narzędzia jakości: `ruff check .` i `mypy src scripts tests` po zainstalowaniu
 ```
 
 Starszy pipeline opisuje [dokumentacja eksperymentów](docs/experiments.md). Jego techniczne remisy i adjudykacja nie są protokołem nowej kampanii. Mała seria testowa nie stanowi dowodu skuteczności uczenia.
+
+## Wygląd i obsługa
+
+Program domyślnie uruchamia się na pełnym ekranie. **F11** przełącza pełny ekran, a **Esc** wraca do zmaksymalizowanego okna. W **Ustawieniach** można zapisać język interfejsu (polski/angielski), motyw jasny/ciemny, start na pełnym ekranie i pauzę przed odpowiedzią bota (300–3000 ms).
+
+**Wyniki** pokazują podsumowanie i tabele partii oraz podgląd wykresów. Dane JSON i raporty techniczne są ukryte do zaznaczenia **Pokaż pliki techniczne**. Zapisane raporty i logi zachowują język ich źródła. Partie zatrzymane limitem są przedstawiane osobno, także gdy stary plik CSV zapisywał je jako remisy.
+
+**Eksperymenty** służą automatycznym porównaniom botów. Wybierz porównanie i liczbę partii, uruchom je i odczytaj podsumowanie na ekranie. Diagnostyka jest dostępna po zaznaczeniu **Szczegóły techniczne**. Do treningu agentów z własnych partii nadal służy **Graj**.

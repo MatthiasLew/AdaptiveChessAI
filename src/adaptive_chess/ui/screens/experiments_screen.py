@@ -1,9 +1,11 @@
+import codecs
 import sys
 from collections.abc import Callable
 
-from PySide6.QtCore import QProcess, QUrl
+from PySide6.QtCore import QProcess, QProcessEnvironment, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFrame,
     QGridLayout,
@@ -11,8 +13,10 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPlainTextEdit,
+    QProgressBar,
     QPushButton,
     QSpinBox,
+    QTextBrowser,
     QVBoxLayout,
     QWidget,
 )
@@ -24,6 +28,7 @@ from adaptive_chess.ui.experiment_config import (
     get_project_root,
     resolve_output_dir,
 )
+from adaptive_chess.ui.i18n import tr
 
 
 class ExperimentsScreen(QWidget):
@@ -39,6 +44,8 @@ class ExperimentsScreen(QWidget):
 
         self._on_back_to_menu_clicked = on_back_to_menu_clicked
         self._process: QProcess | None = None
+        self._cancelled = False
+        self._decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
 
         self._experiment_combo = QComboBox()
         self._matches_spinbox = QSpinBox()
@@ -46,10 +53,10 @@ class ExperimentsScreen(QWidget):
         self._depth_spinbox = QSpinBox()
         self._output_dir_edit = QLineEdit("results/gui_experiments")
 
-        self._status_label = QLabel("Gotowe do uruchomienia eksperymentu.")
+        self._status_label = QLabel("Gotowe do rozpoczęcia.")
         self._log_output = QPlainTextEdit()
 
-        self._run_button = QPushButton("Uruchom eksperyment")
+        self._run_button = QPushButton("Rozpocznij porównanie")
         self._cancel_button = QPushButton("Anuluj")
         self._open_output_button = QPushButton("Otwórz folder wyników")
 
@@ -59,14 +66,14 @@ class ExperimentsScreen(QWidget):
         """
         Ustawia domyślny folder wyników eksperymentów.
         """
-        self._output_dir_edit.setText(output_dir)
+        self._output_dir_edit.setText(tr(output_dir))
 
     def _build_ui(self) -> None:
         root_layout = QVBoxLayout()
         root_layout.setContentsMargins(30, 30, 30, 30)
         root_layout.setSpacing(16)
 
-        title = QLabel("Eksperymenty")
+        title = QLabel("Porównaj boty")
         title.setObjectName("SectionTitle")
 
         content_layout = QHBoxLayout()
@@ -79,6 +86,15 @@ class ExperimentsScreen(QWidget):
         content_layout.addWidget(log_panel, stretch=2)
 
         root_layout.addWidget(title)
+        root_layout.addWidget(
+            QLabel("Boty zagrają ze sobą automatycznie. Nie musisz wykonywać ruchów.")
+        )
+        root_layout.addWidget(
+            QLabel(
+                "Porównanie pomocnicze. Aby badać uczenie z Twoich partii, "
+                "wybierz Graj."
+            )
+        )
         root_layout.addLayout(content_layout, stretch=1)
 
         self.setLayout(root_layout)
@@ -98,16 +114,16 @@ class ExperimentsScreen(QWidget):
         self._status_label.setObjectName("StatusLabel")
         self._status_label.setWordWrap(True)
 
-        layout.addWidget(QLabel("Typ eksperymentu"), 0, 0)
+        layout.addWidget(QLabel("Co chcesz porównać?"), 0, 0)
         layout.addWidget(self._experiment_combo, 0, 1)
 
         layout.addWidget(QLabel("Liczba partii"), 1, 0)
         layout.addWidget(self._matches_spinbox, 1, 1)
 
-        layout.addWidget(QLabel("Limit półruchów"), 2, 0)
+        layout.addWidget(QLabel("Maksymalna liczba ruchów obu stron"), 2, 0)
         layout.addWidget(self._max_half_moves_spinbox, 2, 1)
 
-        layout.addWidget(QLabel("Depth"), 3, 0)
+        layout.addWidget(QLabel("Poziom przewidywania"), 3, 0)
         layout.addWidget(self._depth_spinbox, 3, 1)
 
         layout.addWidget(QLabel("Folder wyników"), 4, 0)
@@ -137,13 +153,27 @@ class ExperimentsScreen(QWidget):
         layout.setContentsMargins(18, 18, 18, 18)
         layout.setSpacing(12)
 
-        log_title = QLabel("Log eksperymentu")
+        log_title = QLabel("Przebieg porównania")
         log_title.setObjectName("SectionTitle")
 
         self._log_output.setReadOnly(True)
         self._log_output.setPlaceholderText("Tutaj pojawi się log działania skryptu.")
 
+        self._progress_bar = QProgressBar()
+        self._progress_bar.setRange(0, 1)
+        self._progress_bar.setValue(0)
+        self._report = QTextBrowser()
+        self._report.setPlainText(
+            "Wybierz porównanie i liczbę partii, a następnie rozpocznij. "
+            "Wyniki pojawią się tutaj."
+        )
+        self._details = QCheckBox("Szczegóły techniczne")
+        self._details.toggled.connect(self._log_output.setVisible)
+        self._log_output.hide()
         layout.addWidget(log_title)
+        layout.addWidget(self._progress_bar)
+        layout.addWidget(self._report, 1)
+        layout.addWidget(self._details)
         layout.addWidget(self._log_output, stretch=1)
 
         panel.setLayout(layout)
@@ -152,23 +182,23 @@ class ExperimentsScreen(QWidget):
 
     def _configure_experiment_combo(self) -> None:
         self._experiment_combo.addItem(
-            "Full suite",
+            "Wszystkie dostępne porównania",
             ExperimentKind.FULL_SUITE.value,
         )
         self._experiment_combo.addItem(
-            "RandomBot vs RandomBot",
+            "Losowy z losowym",
             ExperimentKind.RANDOM_VS_RANDOM.value,
         )
         self._experiment_combo.addItem(
-            "RandomBot vs StaticMinimaxBot",
+            "Losowy ze statycznym",
             ExperimentKind.RANDOM_VS_MINIMAX.value,
         )
         self._experiment_combo.addItem(
-            "RandomBot vs AdaptiveMinimaxBot",
+            "Losowy z adaptacyjnym",
             ExperimentKind.RANDOM_VS_ADAPTIVE.value,
         )
         self._experiment_combo.addItem(
-            "StaticMinimaxBot vs AdaptiveMinimaxBot",
+            "Statyczny z adaptacyjnym",
             ExperimentKind.STATIC_VS_ADAPTIVE.value,
         )
 
@@ -179,11 +209,16 @@ class ExperimentsScreen(QWidget):
 
         self._max_half_moves_spinbox.setMinimum(1)
         self._max_half_moves_spinbox.setMaximum(10_000)
-        self._max_half_moves_spinbox.setValue(20)
+        self._max_half_moves_spinbox.setValue(200)
 
         self._depth_spinbox.setMinimum(1)
         self._depth_spinbox.setMaximum(4)
         self._depth_spinbox.setValue(1)
+        self._depth_spinbox.setToolTip("Większa wartość oznacza dłuższe obliczenia.")
+        self._max_half_moves_spinbox.setToolTip(
+            "Jedna jednostka to ruch jednej strony. Mały limit często "
+            "przerywa grę przed rozstrzygnięciem."
+        )
 
     def _configure_buttons(self) -> None:
         self._run_button.clicked.connect(self._start_experiment)
@@ -209,9 +244,11 @@ class ExperimentsScreen(QWidget):
                 config=config,
             )
         except ValueError as error:
-            self._status_label.setText(str(error))
+            self._status_label.setText(tr(str(error)))
             return
 
+        self._cancelled = False
+        self._decoder.reset()
         self._log_output.clear()
         self._append_log("Start eksperymentu.")
         self._append_log(f"Python: {sys.executable}")
@@ -219,8 +256,17 @@ class ExperimentsScreen(QWidget):
         self._append_log("")
 
         process = QProcess(self)
+        environment = QProcessEnvironment.systemEnvironment()
+        environment.insert("PYTHONPATH", str(get_project_root() / "src"))
+        environment.insert("MPLBACKEND", "Agg")
+        environment.insert("PYTHONUTF8", "1")
+        environment.insert("PYTHONIOENCODING", "utf-8")
+        environment.insert("PYTHONUNBUFFERED", "1")
+        process.setProcessEnvironment(environment)
         process.setProgram(sys.executable)
-        process.setArguments(command)
+        from adaptive_chess.ui.experiment_config import script_arguments
+
+        process.setArguments(script_arguments(command))
         process.setWorkingDirectory(str(get_project_root()))
         process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
 
@@ -242,37 +288,53 @@ class ExperimentsScreen(QWidget):
 
         self._append_log("")
         self._append_log("Przerwanie eksperymentu...")
+        self._cancelled = True
         self._process.terminate()
 
     def _read_process_output(self) -> None:
         if self._process is None:
             return
 
-        output = bytes(self._process.readAllStandardOutput().data()).decode(
-            "utf-8",
-            errors="replace",
+        output = self._decoder.decode(
+            bytes(self._process.readAllStandardOutput().data())
         )
 
         if output:
             self._append_log(output.rstrip())
 
     def _on_process_finished(self, exit_code: int, exit_status) -> None:
+        self._read_process_output()
         self._set_running_state(False)
+        if self._cancelled:
+            self._status_label.setText(tr("Porównanie zatrzymane."))
+            return
 
         if exit_code == 0:
-            self._status_label.setText("Eksperyment zakończony poprawnie.")
+            from adaptive_chess.ui.results_presenter import overview
+
+            self._status_label.setText(tr("Porównanie zakończone. Wyniki są gotowe."))
+            try:
+                self._report.setHtml(
+                    overview(resolve_output_dir(self._output_dir_edit.text()))
+                )
+            except (OSError, ValueError, KeyError) as error:
+                self._report.setPlainText(str(error))
             self._append_log("")
             self._append_log("Eksperyment zakończony poprawnie.")
             return
 
-        self._status_label.setText(f"Eksperyment zakończony błędem: {exit_code}.")
+        self._status_label.setText(
+            tr("Nie udało się ukończyć porównania. Otwórz szczegóły techniczne.")
+        )
         self._append_log("")
         self._append_log(f"Eksperyment zakończony błędem: {exit_code}.")
         self._append_log(f"Status procesu: {exit_status}")
 
     def _on_process_error(self, error) -> None:
         self._set_running_state(False)
-        self._status_label.setText(f"Błąd procesu: {error}.")
+        self._status_label.setText(
+            tr("Nie udało się ukończyć porównania. Otwórz szczegóły techniczne.")
+        )
         self._append_log(f"Błąd procesu: {error}.")
 
     def _open_output_folder(self) -> None:
@@ -286,7 +348,9 @@ class ExperimentsScreen(QWidget):
             matches=self._matches_spinbox.value(),
             max_half_moves=self._max_half_moves_spinbox.value(),
             depth=self._depth_spinbox.value(),
-            output_dir=self._output_dir_edit.text().strip(),
+            output_dir=str(resolve_output_dir(self._output_dir_edit.text().strip()))
+            if self._output_dir_edit.text().strip()
+            else "",
         )
 
     def _append_log(self, text: str) -> None:
@@ -308,7 +372,9 @@ class ExperimentsScreen(QWidget):
         self._depth_spinbox.setEnabled(not running)
         self._output_dir_edit.setEnabled(not running)
 
+        self._progress_bar.setRange(0, 0 if running else 1)
+        self._progress_bar.setValue(0 if running else 1)
         if running:
-            self._status_label.setText("Eksperyment jest uruchomiony.")
+            self._status_label.setText(tr("Porównanie trwa…"))
         else:
             self._cancel_button.setEnabled(False)

@@ -4,6 +4,7 @@ import hashlib
 import json
 import platform
 import sqlite3
+from contextlib import closing
 from datetime import datetime, timezone
 from importlib.metadata import version
 from pathlib import Path
@@ -35,11 +36,39 @@ def environment_metadata() -> dict:
     for path in sorted(source_root.rglob("*.py")):
         digest.update(path.relative_to(source_root).as_posix().encode())
         digest.update(path.read_bytes())
+    build_info = source_root / "_build.json"
+    source_hash = (
+        json.loads(build_info.read_text())["source_sha256"]
+        if build_info.exists()
+        else digest.hexdigest()
+    )
     return {
+        "platform": platform.platform(),
+        "machine": platform.machine(),
+        "dependencies": {
+            name: version(name) for name in ("chess", "PySide6", "pandas", "matplotlib")
+        },
         "python": platform.python_version(),
         "chess": version("chess"),
-        "source_sha256": digest.hexdigest(),
+        "source_sha256": source_hash,
     }
+
+
+def environment_compatible(saved: dict) -> bool:
+    """Allow the audited UI-only upgrade without changing research conditions.
+
+    Preserve the original campaign manifest. New games record their runtime
+    manifest separately; unknown source versions still cannot resume a study.
+    """
+    current = environment_metadata()
+    compatible_sources = {
+        current["source_sha256"],
+        "d755b319cfb7961cfa0cc155b520d801f011d4597528d277c296311ff973f711",
+        "3ec6a4a0990fc51d9d90eb12cfa543a2259b0c679011bf0cb8e3774217dd3d5c",
+    }
+    return saved.get("source_sha256") in compatible_sources and {
+        k: v for k, v in saved.items() if k != "source_sha256"
+    } == {k: v for k, v in current.items() if k != "source_sha256"}
 
 
 def checkpoint(profile: dict, games: int) -> dict:
@@ -64,7 +93,7 @@ class Campaign:
         if not self.path.is_file():
             raise ValueError("Nie znaleziono pliku kampanii.")
         try:
-            with sqlite3.connect(self.path) as db:
+            with closing(sqlite3.connect(self.path)) as db, db:
                 row = db.execute("SELECT revision, document FROM campaign").fetchone()
         except sqlite3.DatabaseError as error:
             raise ValueError("Nieprawidłowa baza kampanii.") from error
@@ -105,7 +134,7 @@ class Campaign:
             "protocol": "alternating_agents_and_colors_v1",
             "environment": environment_metadata(),
         }
-        with sqlite3.connect(target) as db:
+        with closing(sqlite3.connect(target)) as db, db:
             db.execute(
                 "CREATE TABLE campaign (id INTEGER PRIMARY KEY CHECK(id=1), "
                 "revision INTEGER NOT NULL, document TEXT NOT NULL)"
@@ -114,7 +143,7 @@ class Campaign:
         return cls(target)
 
     def save(self) -> None:
-        with sqlite3.connect(self.path, timeout=10) as db:
+        with closing(sqlite3.connect(self.path, timeout=10)) as db, db:
             cursor = db.execute(
                 "UPDATE campaign SET revision=revision+1, document=? "
                 "WHERE id=1 AND revision=?",

@@ -1,3 +1,4 @@
+import sys
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -31,6 +32,8 @@ def get_project_root() -> Path:
     """
     Zwraca katalog główny projektu.
     """
+    if getattr(sys, "frozen", False):
+        return Path(getattr(sys, "_MEIPASS", ""))
     return Path(__file__).resolve().parents[3]
 
 
@@ -58,7 +61,7 @@ def resolve_output_dir(
     """
     Zamienia folder wyników na ścieżkę absolutną.
     """
-    root = project_root or get_project_root()
+    root = project_root or writable_root()
     path = Path(output_dir)
 
     if path.is_absolute():
@@ -148,3 +151,30 @@ def _build_series_command(
         "--output-csv",
         str(output_csv),
     ]
+
+
+def writable_root() -> Path:
+    if not getattr(sys, "frozen", False):
+        return get_project_root()
+    from PySide6.QtCore import QStandardPaths
+
+    root = (
+        Path(
+            QStandardPaths.writableLocation(
+                QStandardPaths.StandardLocation.AppLocalDataLocation
+            )
+        )
+        / "AdaptiveChessAI"
+    )
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def script_arguments(command: list[str]) -> list[str]:
+    if getattr(sys, "frozen", False):
+        return ["--script", Path(command[0]).name, *command[1:]]
+    return command
+
+
+def subprocess_command(command: list[str]) -> list[str]:
+    return [command[0], *script_arguments(command[1:])]

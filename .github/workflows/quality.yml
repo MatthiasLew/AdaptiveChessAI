@@ -1,0 +1,48 @@
+name: Quality and desktop
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONUTF8: '1'
+      PYTHONPATH: src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libopengl0
+      - run: python -m pip install -r requirements.txt ruff mypy
+      - run: python -m ruff check src scripts tests
+      - run: python -m mypy
+      - run: python -m pytest -q
+      - run: python -m adaptive_chess --smoke
+  desktop:
+    runs-on: windows-latest
+    needs: test
+    env:
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - run: python -m pip install -r requirements-desktop-windows.lock
+      - run: python scripts/build_desktop.py
+      - run: python scripts/smoke_desktop.py dist/AdaptiveChessAI/AdaptiveChessAI.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AdaptiveChessAI-Windows
+          path: dist/AdaptiveChessAI

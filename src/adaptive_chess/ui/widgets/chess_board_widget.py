@@ -83,6 +83,7 @@ class ChessBoardWidget(QFrame):
 
         self._board = chess.Board()
         self._flipped = False
+        self._last_move: chess.Move | None = None
         self._selected_square: chess.Square | None = None
         self._legal_target_squares: set[chess.Square] = set()
         self._square_labels: dict[chess.Square, BoardSquareLabel] = {}
@@ -103,6 +104,7 @@ class ChessBoardWidget(QFrame):
         self.set_board(self._board)
 
     def set_board(self, board: chess.Board) -> None:
+        self._last_move = board.peek() if board.move_stack else None
         self._board = board.copy(stack=False)
         self._refresh_pieces()
         self._refresh_square_styles()
@@ -200,6 +202,12 @@ class ChessBoardWidget(QFrame):
 
         if square in self._legal_target_squares:
             return "BoardLegalTargetSquare"
+
+        if self._last_move and square in (
+            self._last_move.from_square,
+            self._last_move.to_square,
+        ):
+            return "BoardLastMoveSquare"
 
         if is_light_square(square):
             return "BoardLightSquare"

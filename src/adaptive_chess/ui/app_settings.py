@@ -8,6 +8,10 @@ APPLICATION_NAME = "AdaptiveChessAI"
 
 @dataclass(frozen=True)
 class AppSettings:
+    language: str = "pl"
+    theme: str = "dark"
+    fullscreen: bool = True
+    bot_delay_ms: int = 850
     default_bot: str = "random"
     default_human_color: str = "white"
     default_depth: int = 1
@@ -56,7 +60,15 @@ class AppSettingsStore:
         if not isinstance(default_output_dir, str):
             default_output_dir = "results/gui_experiments"
 
+        language = self._settings.value("ui/language", "pl", type=str)
+        theme = self._settings.value("ui/theme", "dark", type=str)
         return AppSettings(
+            language=language if language in ("pl", "en") else "pl",
+            theme=theme if theme in ("dark", "light") else "dark",
+            fullscreen=self._settings.value("ui/fullscreen", True, type=bool),
+            bot_delay_ms=max(
+                300, min(3000, self._settings.value("ui/bot_delay_ms", 850, type=int))
+            ),
             default_bot=default_bot,
             default_human_color=default_human_color,
             default_depth=default_depth,
@@ -81,4 +93,6 @@ class AppSettingsStore:
             settings.default_experiment_output_dir,
         )
 
+        for key in ("language", "theme", "fullscreen", "bot_delay_ms"):
+            self._settings.setValue(f"ui/{key}", getattr(settings, key))
         self._settings.sync()

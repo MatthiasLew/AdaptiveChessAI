@@ -1,38 +1,29 @@
-# TODO — rozwój AdaptiveChessAI
+# TODO — stan po domknięciu implementacji
 
-Stan po pierwszej implementacji kampanii, 14 września 2026.
+Aktualizacja: 15 września 2026. Wcześniejsze „częściowo” opisywało pierwszy przyrost, ograniczony do dwóch agentów. Poniżej stan obecnego oprogramowania; wykonanie badania z udziałem człowieka jest oddzielnym zadaniem.
 
-| Zadanie | Stan | Zakres / co pozostało |
+| Zadanie | Stan | Co jest dostępne |
 |---|---|---|
-| Protokół badania | Częściowo | Jest protokół pilotażowy; ustalić główną hipotezę i pomiar przewagi nad człowiekiem |
-| Ocena remisów | Gotowe dla kampanii | Poprawiono automatyczne remisy i brak adaptacyjnej korekty stanów końcowych; starszy format serii nadal ma techniczne remisy |
-| Trwała pamięć | Gotowe dla kampanii | Profil, restart, kontrola rewizji i sum kontrolnych |
-| Trening / ocena | Gotowe dla kampanii | Turniej nie zmienia agentów; starsze skrypty mają dotychczasową semantykę |
-| Kampania X partii | Gotowe, 2 agentów | Adaptive + kontrolny Static, zmiana kolorów, postęp |
-| Autosave i wznowienie | Gotowe dla kampanii | Każdy ruch; checkpoint razem z finalizacją gry |
-| GUI gry | Częściowo | Duże figury i współrzędne; w kampanii kwadratowa plansza, promocja, poddanie; dalsze testy DPI i ergonomii |
-| Obliczenia w tle | Gotowe dla kampanii | Worker ruchów oraz proces turnieju; swobodna gra pozostaje synchroniczna |
-| Checkpointy | Gotowe | Po każdej grze Adaptive; automatyczna ocena checkpointów pośrednich do dodania |
-| Turniej | Gotowy pilotaż | 18 partii, zmiana kolorów, zamrożone modele, wznowienie; konfigurowalny zestaw otwarć do dodania |
-| Agent imitacji | Do zrobienia | Wspólne cechy, trening z przykładów, zapis modelu i testy |
-| Agent TD | Do zrobienia | Uczenie wartości pozycji, nagrody i kontrola perspektywy |
-| Statystyki / wykresy | Częściowo | Tabela i eksport; krzywe uczenia oraz niepewność do dodania |
-| Powtarzalność | Częściowo | Stały protokół, hashe i wersje; pełny manifest środowiska i budżety obliczeń do dodania |
-| Pilotaż użytkownika | Do wykonania | Rozegrać rzeczywiste partie w nowej kampanii i ocenić użyteczność |
-| Badanie do pracy | Do wykonania | Protokół końcowy, dane, analiza i wnioski |
-| Dokumentacja / jakość | Częściowo | README, instrukcja, architektura i testy; CI oraz pakowanie desktopowe pozostają w planie |
+| Protokół badania | Gotowe | Pytanie, hipoteza robocza, budżety, checkpointy, kryterium przewagi i zasady interpretacji |
+| Ocena remisów | Gotowe dla protokołu v2 | Remisy regułowe; limit to `*`, oddzielny licznik, bez sztucznych punktów |
+| Trwała pamięć | Gotowe | Profil i wagi, wersje, sumy kontrolne, transakcje SQLite |
+| Trening / ocena | Gotowe | Osobne gry kontrolne, zamrożone modele i weryfikacja niezmienności |
+| Kampania X partii | Gotowe | Cztery metody, 4X gier, stała kolejność zależna od seeda i zmiana kolorów |
+| Autosave i wznowienie | Gotowe | Zapis każdego ruchu, odtworzenie uczenia bez podwojenia aktualizacji |
+| GUI gry | Gotowe | Kwadratowe plansze, współrzędne, promocja, poddanie, zakładki i przewijanie |
+| Obliczenia w tle | Gotowe | Ruchy w obu trybach gry, osobny proces oceny i turnieju |
+| Checkpointy | Gotowe | Stan 0 i po każdej grze wszystkich metod; automatyczna ocena zapisanych stanów |
+| Turniej | Gotowe | Cztery metody, obydwa kolory, konfigurowalne otwarcia, domyślnie 36 meczów, wznowienie |
+| Agent imitacji | Gotowe | Liniowy ranking ruchów, uczenie z przykładów człowieka, zapis i testy |
+| Agent TD | Gotowe | TD(0), perspektywa białych, nagrody terminalne, zapis i testy |
+| Statystyki / wykresy | Gotowe | Krzywe, przyrost względem stanu 0, niepewność, kontrola przeciw człowiekowi, CSV/JSON/PGN/PNG |
+| Powtarzalność | Gotowe | Seed, limit węzłów, wersje zależności, hash źródeł, manifest paczki, pomiar czasów i aktualizacji |
+| Dokumentacja / jakość | Gotowe lokalnie | Instrukcja, protokół, architektura, testy, Ruff, mypy, workflow CI |
+| Paczka desktopowa Windows | Gotowe lokalnie | EXE z zależnościami, skrypt budowy i automatyczny test gotowej paczki |
+| Pilotaż z użytkownikiem | Do rozegrania | Rzeczywiste gry i ocena wygody obsługi; testy syntetyczne nie zastępują udziału człowieka |
+| Badanie do pracy | Do przeprowadzenia | Ustalić plan z promotorem, zebrać partie, wykonać niezależne bloki kontrolne i napisać wnioski |
 
-Pierwszy przyrost dostarcza pełny przepływ trening → restart → turniej. Nie oznacza ukończenia wszystkich punktów projektu badawczego.
+Dowody i ograniczenia sprawdzeń: [walidacja](WALIDACJA_2026-09-15.md).
+Instrukcja rozpoczęcia i interpretacji: [kampania](campaign.md).
 
-Walidacja tego etapu: **284 testy passed**, Ruff, mypy (110 plików) oraz
-`ai-dev check --mode fast --no-cache` przeszły. Test integracyjny GUI wykonuje ruch,
-wczytuje kampanię ponownie i uruchamia rzeczywisty proces turnieju 18 partii.
-Testy backendu obejmują przerwanie przed odpowiedzią bota, wznowienie turnieju,
-niezmienność profilu, konflikt zapisów, uszkodzony checkpoint i eksport PGN.
-Render ekranu kampanii obejrzano w Qt offscreen z jawnym ładowaniem fontów systemowych.
-
-Do przygotowania pracy użyto analizatora z checkoutu `freelance-dev-suite`
-i narzędzi z checkoutu `ai-dev-cli-tools`. Pierwszy raport intake wykrył pusty
-notebook; plik poprawiono. Pełny pytest uruchomiono w środowisku projektu,
-poza ograniczeniem sandboxa blokującym katalogi tymczasowe. Nie wykonywano
-commitów ani publikacji; zachowano zastaną zmianę testu GUI.
+Implementacja workflow CI jest gotowa; jego wynik na GitHub będzie znany dopiero po publikacji zmian i wykonaniu workflow. Starsze kampanie v1 i pomocnicze skrypty zachowują dawny protokół; do nowego badania utwórz nową kampanię. Ukończenie oprogramowania nie przesądza, że agent pokona gracza — właśnie to należy zmierzyć.

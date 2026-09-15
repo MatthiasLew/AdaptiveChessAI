@@ -21,3 +21,7 @@ files = ["src", "scripts", "tests"]
 ignore_missing_imports = true
 no_site_packages = true
 warn_unused_ignores = true
+
+# Keep bilingual catalogue entries together for review.
+[tool.ruff.lint.per-file-ignores]
+"src/adaptive_chess/ui/i18n.py" = ["E501"]

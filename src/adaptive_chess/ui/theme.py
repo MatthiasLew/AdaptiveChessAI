@@ -1,6 +1,7 @@
 DARK_THEME_STYLESHEET = """
 QLabel#BoardLightSquare, QLabel#BoardDarkSquare,
-QLabel#BoardSelectedSquare, QLabel#BoardLegalTargetSquare {
+QLabel#BoardSelectedSquare, QLabel#BoardLegalTargetSquare,
+QLabel#BoardLastMoveSquare {
     font-family: "Segoe UI Symbol";
     font-size: 38px;
 }
@@ -116,6 +117,11 @@ QLabel#FenLabel {
     color: #b8c7d9;
     font-size: 12px;
 }
+QLabel#BoardLastMoveSquare {
+    background-color: #e1bd63;
+    color: #101820;
+    border: 2px solid #ffe7a1;
+}
 QLabel#BoardSelectedSquare {
     background-color: #f2cc60;
     color: #101820;
@@ -136,4 +142,32 @@ QLabel#SaveStatusLabel {
     color: #56d364;
     font-size: 12px;
 }
+"""
+
+
+LIGHT_THEME_STYLESHEET = DARK_THEME_STYLESHEET
+for dark, light in {
+    "#101820": "#f5f7fb",
+    "#f2f5f7": "#172033",
+    "#b8c7d9": "#475569",
+    "#161b22": "#ffffff",
+    "#0d1117": "#ffffff",
+    "#30363d": "#dbe3ef",
+    "#d0d7de": "#172033",
+    "#484f58": "#cbd5e1",
+}.items():
+    LIGHT_THEME_STYLESHEET = LIGHT_THEME_STYLESHEET.replace(dark, light)
+LIGHT_THEME_STYLESHEET += """
+QLabel { color: #172033; background: transparent; }
+QLabel#TitleLabel, QLabel#SectionTitle { color: #172033; }
+QLabel#BoardLightSquare, QLabel#BoardDarkSquare, QLabel#BoardLastMoveSquare,
+QLabel#BoardSelectedSquare, QLabel#BoardLegalTargetSquare { color: #101820; }
+QPushButton#SecondaryButton { color: #172033; }
+QTextBrowser, QTableView { background: #ffffff; color: #172033; }
+"""
+DARK_THEME_STYLESHEET += """
+QLabel { background: transparent; }
+QTextBrowser { background: #0d1117; color: #f2f5f7; padding: 14px; }
+QProgressBar { border: 1px solid #59708a; border-radius: 5px; text-align: center; }
+QProgressBar::chunk { background: #1f6feb; }
 """

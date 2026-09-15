@@ -4,6 +4,7 @@ from pathlib import Path
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
+    QCheckBox,
     QFileDialog,
     QFrame,
     QHBoxLayout,
@@ -11,15 +12,15 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QPlainTextEdit,
     QPushButton,
+    QTextBrowser,
     QVBoxLayout,
     QWidget,
 )
 
+from adaptive_chess.ui.i18n import tr
 from adaptive_chess.ui.results_loader import (
     ResultFileInfo,
-    format_file_size,
     read_text_preview,
     summarize_results_folder,
 )
@@ -45,7 +46,9 @@ class ResultsScreen(QWidget):
         self._folder_edit = QLineEdit("results/gui_experiments")
         self._status_label = QLabel("Wybierz folder wyników i kliknij „Wczytaj”.")
         self._files_list = QListWidget()
-        self._preview = QPlainTextEdit()
+        self._preview = QTextBrowser()
+        self._technical = QCheckBox("Pokaż pliki techniczne")
+        self._technical.toggled.connect(self._load_results_folder)
 
         self._load_button = QPushButton("Wczytaj")
         self._browse_button = QPushButton("Wybierz folder")
@@ -127,7 +130,7 @@ class ResultsScreen(QWidget):
         layout.setContentsMargins(18, 18, 18, 18)
         layout.setSpacing(12)
 
-        title = QLabel("Pliki wynikowe")
+        title = QLabel("Raporty i wykresy")
         title.setObjectName("SectionTitle")
 
         self._files_list.itemSelectionChanged.connect(self._show_selected_file_preview)
@@ -137,6 +140,7 @@ class ResultsScreen(QWidget):
         self._open_file_button.clicked.connect(self._open_selected_file)
 
         layout.addWidget(title)
+        layout.addWidget(self._technical)
         layout.addWidget(self._files_list, stretch=1)
         layout.addWidget(self._open_file_button)
 
@@ -152,13 +156,11 @@ class ResultsScreen(QWidget):
         layout.setContentsMargins(18, 18, 18, 18)
         layout.setSpacing(12)
 
-        title = QLabel("Podgląd")
+        title = QLabel("Podsumowanie")
         title.setObjectName("SectionTitle")
 
         self._preview.setReadOnly(True)
-        self._preview.setPlaceholderText(
-            "Tutaj pojawi się podgląd plików Markdown, TXT, CSV albo JSON."
-        )
+        self._preview.setPlaceholderText("Wybierz raport lub wykres po lewej stronie.")
 
         layout.addWidget(title)
         layout.addWidget(self._preview, stretch=1)
@@ -175,13 +177,13 @@ class ResultsScreen(QWidget):
         )
 
         if selected_folder:
-            self._folder_edit.setText(selected_folder)
+            self._folder_edit.setText(tr(selected_folder))
 
     def _load_results_folder(self) -> None:
         try:
             summary = summarize_results_folder(self._folder_edit.text())
         except ValueError as error:
-            self._status_label.setText(str(error))
+            self._status_label.setText(tr(str(error)))
             self._files_list.clear()
             self._preview.clear()
             return
@@ -191,21 +193,32 @@ class ResultsScreen(QWidget):
         self._preview.clear()
 
         if not summary.exists:
-            self._status_label.setText(f"Folder nie istnieje: {summary.folder}")
+            self._status_label.setText(tr(f"Folder nie istnieje: {summary.folder}"))
             return
 
         for file_info in summary.files:
+            if (
+                file_info.path.suffix in (".json", ".txt")
+                and not self._technical.isChecked()
+            ):
+                continue
             item = QListWidgetItem(self._format_file_item(file_info))
             item.setData(256, file_info)
             self._files_list.addItem(item)
 
         self._status_label.setText(
-            f"Wczytano folder: {summary.folder}. "
-            f"Liczba plików wynikowych: {len(summary.files)}."
+            tr(
+                f"Wczytano folder: {summary.folder}. "
+                f"Liczba plików wynikowych: {len(summary.files)}."
+            )
         )
 
-        if summary.preferred_preview_file is not None:
-            self._select_file(summary.preferred_preview_file)
+        from adaptive_chess.ui.results_presenter import overview
+
+        try:
+            self._preview.setHtml(overview(summary.folder))
+        except (OSError, ValueError, KeyError) as error:
+            self._preview.setPlainText(str(error))
 
     def _show_selected_file_preview(self) -> None:
         file_info = self._get_selected_file_info()
@@ -214,12 +227,28 @@ class ResultsScreen(QWidget):
             self._preview.clear()
             return
 
-        try:
-            preview_text = read_text_preview(file_info.path)
-        except OSError as error:
-            preview_text = f"Nie udało się wczytać pliku: {error}"
+        from html import escape
 
-        self._preview.setPlainText(preview_text)
+        from adaptive_chess.ui.results_presenter import file_html, overview
+
+        path = file_info.path
+        try:
+            self._preview.document().setBaseUrl(
+                QUrl.fromLocalFile(str(path.parent) + "/")
+            )
+            if path.suffix in (".csv", ".json"):
+                self._preview.setHtml(file_html(path))
+            elif path.name == "suite_summary.md":
+                self._preview.setHtml(overview(path.parent))
+            elif path.suffix == ".md":
+                self._preview.setMarkdown(path.read_text(encoding="utf-8"))
+            elif path.suffix == ".png":
+                url = escape(QUrl.fromLocalFile(str(path)).toString(), quote=True)
+                self._preview.setHtml(f'<img src="{url}" width="700">')
+            else:
+                self._preview.setPlainText(read_text_preview(path))
+        except (OSError, ValueError, KeyError) as error:
+            self._preview.setPlainText(f"Nie udało się wczytać raportu: {error}")
 
     def _open_loaded_folder(self) -> None:
         folder = self._loaded_folder
@@ -235,7 +264,7 @@ class ResultsScreen(QWidget):
         file_info = self._get_selected_file_info()
 
         if file_info is None:
-            self._status_label.setText("Nie wybrano pliku.")
+            self._status_label.setText(tr("Nie wybrano pliku."))
             return
 
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(file_info.path.resolve())))
@@ -263,8 +292,6 @@ class ResultsScreen(QWidget):
         return None
 
     def _format_file_item(self, file_info: ResultFileInfo) -> str:
-        return (
-            f"[{file_info.category}] "
-            f"{file_info.name} "
-            f"({format_file_size(file_info.size_bytes)})"
-        )
+        from adaptive_chess.ui.results_presenter import title
+
+        return f"{title(file_info.path)} · {file_info.path.parent.name}"

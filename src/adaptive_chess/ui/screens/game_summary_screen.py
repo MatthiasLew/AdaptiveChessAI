@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 
 from adaptive_chess.play.game_exporter import write_game_summary_exports
 from adaptive_chess.play.human_vs_bot_session import HumanVsBotGameSummary
+from adaptive_chess.ui.i18n import tr
 from adaptive_chess.ui.summary_formatter import (
     color_to_polish,
     describe_material_balance,
@@ -57,19 +58,19 @@ class GameSummaryScreen(QWidget):
         Ustawia dane zakończonej partii.
         """
         self._summary = summary
-        self._save_status_label.setText("")
+        self._save_status_label.setText(tr(""))
 
         self._result_label.setText(
-            f"{summary.result} — {describe_result(summary.result)}"
+            tr(f"{summary.result} — {describe_result(summary.result)}")
         )
-        self._status_label.setText(summary.status_message)
-        self._bot_label.setText(summary.bot_name)
-        self._human_color_label.setText(color_to_polish(summary.human_color))
-        self._half_moves_label.setText(str(summary.half_moves))
+        self._status_label.setText(tr(summary.status_message))
+        self._bot_label.setText(tr(summary.bot_name))
+        self._human_color_label.setText(tr(color_to_polish(summary.human_color)))
+        self._half_moves_label.setText(tr(str(summary.half_moves)))
         self._material_label.setText(
-            describe_material_balance(summary.final_material_balance)
+            tr(describe_material_balance(summary.final_material_balance))
         )
-        self._fen_label.setText(summary.final_fen)
+        self._fen_label.setText(tr(summary.final_fen))
 
         self._history_list.clear()
 
@@ -160,7 +161,7 @@ class GameSummaryScreen(QWidget):
 
     def _save_summary(self) -> None:
         if self._summary is None:
-            self._save_status_label.setText("Brak partii do zapisania.")
+            self._save_status_label.setText(tr("Brak partii do zapisania."))
             return
 
         try:
@@ -169,9 +170,11 @@ class GameSummaryScreen(QWidget):
                 output_dir=DEFAULT_HUMAN_GAME_RESULTS_DIR,
             )
         except OSError as error:
-            self._save_status_label.setText(f"Nie udało się zapisać partii: {error}")
+            self._save_status_label.setText(
+                tr(f"Nie udało się zapisać partii: {error}")
+            )
             return
 
         self._save_status_label.setText(
-            f"Zapisano partię:\nJSON: {json_path}\nCSV: {csv_path}"
+            tr(f"Zapisano partię:\nJSON: {json_path}\nCSV: {csv_path}")
         )

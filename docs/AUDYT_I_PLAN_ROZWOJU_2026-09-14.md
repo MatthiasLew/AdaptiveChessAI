@@ -1,3 +1,5 @@
+> Dokument historyczny: diagnoza sprzed implementacji. Aktualny stan: [TODO](TODO.md), [protokół v2](campaign.md) i [walidacja](WALIDACJA_2026-09-15.md).
+
 # AdaptiveChessAI — audyt i propozycja rozwoju
 
 Data: 14 września 2026. Analizowany lokalny HEAD: `920d1f20786d68dd5d19dbe675bf47bca78cbb1c`.

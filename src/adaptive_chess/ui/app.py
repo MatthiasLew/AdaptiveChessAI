@@ -18,7 +18,7 @@ def run_gui() -> int:
     app.setStyleSheet(DARK_THEME_STYLESHEET)
 
     window = MainWindow()
-    window.show()
+    window.show_startup()
 
     return app.exec()
 

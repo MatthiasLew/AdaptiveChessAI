@@ -1,4 +1,11 @@
-from PySide6.QtWidgets import QMainWindow, QStackedWidget, QWidget
+from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QScrollArea,
+    QStackedWidget,
+    QWidget,
+)
 
 from adaptive_chess.play.human_vs_bot_session import HumanVsBotGameSummary
 from adaptive_chess.ui.app_settings import (
@@ -28,6 +35,10 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("AdaptiveChessAI")
         self.resize(1180, 760)
+        self._fullscreen_shortcut = QShortcut(QKeySequence("F11"), self)
+        self._fullscreen_shortcut.activated.connect(self.toggle_fullscreen)
+        self._escape_shortcut = QShortcut(QKeySequence("Escape"), self)
+        self._escape_shortcut.activated.connect(self.leave_fullscreen)
 
         self._stack = QStackedWidget()
         self._screens: dict[ScreenName, int] = {}
@@ -42,7 +53,41 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self._stack)
         self.show_screen(ScreenName.MENU)
 
+    def show_startup(self) -> None:
+        if self._settings_store.load().fullscreen:
+            self.showFullScreen()
+        else:
+            self.show()
+
+    def toggle_fullscreen(self) -> None:
+        self.showMaximized() if self.isFullScreen() else self.showFullScreen()
+
+    def leave_fullscreen(self) -> None:
+        if self.isFullScreen():
+            self.showMaximized()
+
     def _apply_settings(self, settings: AppSettings) -> None:
+        from adaptive_chess.ui.i18n import localize, set_language
+        from adaptive_chess.ui.theme import (
+            DARK_THEME_STYLESHEET,
+            LIGHT_THEME_STYLESHEET,
+        )
+
+        set_language(settings.language)
+        localize(self._stack)
+        app = QApplication.instance()
+        if isinstance(app, QApplication):
+            stylesheet = (
+                LIGHT_THEME_STYLESHEET
+                if settings.theme == "light"
+                else DARK_THEME_STYLESHEET
+            )
+            if app.styleSheet() != stylesheet:
+                app.setStyleSheet(stylesheet)
+        self._campaign_screen._reply_timer.setInterval(settings.bot_delay_ms)
+        if self.isVisible():
+            self.showFullScreen() if settings.fullscreen else self.showMaximized()
+
         if self._game_screen is not None:
             self._game_screen.apply_defaults(
                 bot_kind=settings.default_bot,
@@ -84,6 +129,10 @@ class MainWindow(QMainWindow):
         self._game_screen.prepare_for_new_game()
         self.show_screen(ScreenName.GAME)
 
+    def start_campaign_flow(self) -> None:
+        self._campaign_screen.show_entry()
+        self.show_screen(ScreenName.CAMPAIGN)
+
     def _build_screens(self) -> None:
         menu_screen = MenuScreen(
             on_play_clicked=self.start_new_game_flow,
@@ -91,7 +140,7 @@ class MainWindow(QMainWindow):
             on_results_clicked=lambda: self.show_screen(ScreenName.RESULTS),
             on_settings_clicked=lambda: self.show_screen(ScreenName.SETTINGS),
             on_exit_clicked=self._close_window,
-            on_campaign_clicked=lambda: self.show_screen(ScreenName.CAMPAIGN),
+            on_campaign_clicked=self.start_campaign_flow,
         )
 
         self._game_screen = GameScreen(
@@ -128,12 +177,15 @@ class MainWindow(QMainWindow):
         self._add_screen(ScreenName.RESULTS, results_screen)
         self._add_screen(ScreenName.SETTINGS, settings_screen)
         self._campaign_screen = CampaignScreen(
-            on_back=lambda: self.show_screen(ScreenName.MENU))
+            on_back=lambda: self.show_screen(ScreenName.MENU)
+        )
         self._add_screen(ScreenName.CAMPAIGN, self._campaign_screen)
         self._apply_settings(self._settings_store.load())
 
     def closeEvent(self, event) -> None:
-        if self._campaign_screen.thinking:
+        if self._campaign_screen.thinking or (
+            self._game_screen is not None and self._game_screen.thinking
+        ):
             self.statusBar().showMessage("Poczekaj na zakończenie ruchu i zapisu.")
             event.ignore()
             return
@@ -148,5 +200,8 @@ class MainWindow(QMainWindow):
         screen_name: ScreenName,
         widget: QWidget,
     ) -> None:
-        index = self._stack.addWidget(widget)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(widget)
+        index = self._stack.addWidget(scroll)
         self._screens[screen_name] = index

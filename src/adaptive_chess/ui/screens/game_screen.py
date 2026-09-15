@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QListWidget,
     QPushButton,
@@ -23,10 +24,12 @@ from adaptive_chess.ui.bot_factory import (
     create_bot_for_gui,
     parse_human_color,
 )
+from adaptive_chess.ui.i18n import tr
 from adaptive_chess.ui.move_builder import (
     build_uci_move_from_clicks,
     get_legal_target_squares,
 )
+from adaptive_chess.ui.screens.campaign_screen import CampaignWorker
 from adaptive_chess.ui.widgets.chess_board_widget import ChessBoardWidget
 
 
@@ -75,10 +78,13 @@ class GameScreen(QWidget):
         self._on_back_to_menu_clicked = on_back_to_menu_clicked
         self._on_game_finished = on_game_finished
 
+        self._worker: CampaignWorker | None = None
+        self._error = ""
         self._session: HumanVsBotSession | None = None
         self._selected_square: chess.Square | None = None
 
         self._board_widget = ChessBoardWidget()
+        self._board_widget.setFixedSize(512, 512)
         self._board_widget.square_clicked.connect(self._on_board_square_clicked)
 
         self._bot_combo = QComboBox()
@@ -103,6 +109,8 @@ class GameScreen(QWidget):
         Nie startuje automatycznie partii. Użytkownik nadal musi kliknąć
         przycisk „Nowa gra”, żeby utworzyć sesję.
         """
+        if self.thinking:
+            return
         self._session = None
         self._clear_selection()
 
@@ -110,8 +118,8 @@ class GameScreen(QWidget):
         self._board_widget.set_flipped(False)
         self._board_widget.set_board(board)
 
-        self._status_label.setText("Wybierz ustawienia i kliknij „Nowa gra”.")
-        self._fen_label.setText(board.fen())
+        self._status_label.setText(tr("Wybierz ustawienia i kliknij „Nowa gra”."))
+        self._fen_label.setText(tr(board.fen()))
         self._history_list.clear()
 
         self._set_configuration_enabled(True)
@@ -203,6 +211,9 @@ class GameScreen(QWidget):
         layout.addWidget(self._finish_game_button)
         layout.addWidget(self._clear_game_button)
 
+        resign_button = QPushButton("Poddaj partię")
+        resign_button.clicked.connect(self._resign)
+        layout.addWidget(resign_button)
         back_button = QPushButton("Powrót do menu")
         back_button.setObjectName("SecondaryButton")
         back_button.clicked.connect(self._on_back_to_menu_clicked)
@@ -269,17 +280,44 @@ class GameScreen(QWidget):
         self._finish_game_button.setEnabled(True)
         self._clear_game_button.setEnabled(True)
 
-        opening_bot_move = self._session.start()
+        if human_color == chess.WHITE:
+            self._session.start()
+            self._refresh_from_session()
+        else:
+            self._run(self._session.start)
 
+    @property
+    def thinking(self) -> bool:
+        return self._worker is not None
+
+    def _run(self, action: Callable[[], object]) -> None:
+        if self.thinking:
+            return
+        self._error = ""
+        self.setEnabled(False)
+        self._status_label.setText(tr("Bot myśli…"))
+        self._worker = CampaignWorker(action, self)
+        self._worker.failed.connect(self._failed)
+        self._worker.finished.connect(self._done)
+        self._worker.start()
+
+    def _failed(self, message: str) -> None:
+        self._error = message
+
+    def _done(self) -> None:
+        if self._worker:
+            self._worker.deleteLater()
+        self._worker = None
+        self.setEnabled(True)
         self._refresh_from_session()
+        if self._error:
+            self._status_label.setText(tr(self._error))
+        elif self._session and self._session.is_game_over():
+            self._show_finished_game_summary()
 
-        if opening_bot_move is not None:
-            self._status_label.setText(
-                f"Bot rozpoczął partię ruchem: "
-                f"{opening_bot_move.san} ({opening_bot_move.move_uci})"
-            )
-
-        if self._session.is_game_over():
+    def _resign(self) -> None:
+        if self._session and not self.thinking and not self._session.is_game_over():
+            self._session.resign()
             self._show_finished_game_summary()
 
     def _finish_current_game(self) -> None:
@@ -290,26 +328,28 @@ class GameScreen(QWidget):
         Wynik zostanie zapisany jako '*', jeśli partia nie była formalnie zakończona.
         """
         if self._session is None:
-            self._status_label.setText("Brak aktywnej partii do podsumowania.")
+            self._status_label.setText(tr("Brak aktywnej partii do podsumowania."))
             return
 
         summary = self._session.get_current_game_summary()
         self._on_game_finished(summary)
 
     def _on_board_square_clicked(self, square: int) -> None:
+        if self.thinking:
+            return
         if self._session is None:
-            self._status_label.setText("Najpierw kliknij „Nowa gra”.")
+            self._status_label.setText(tr("Najpierw kliknij „Nowa gra”."))
             return
 
         if self._session.is_game_over():
-            self._status_label.setText(self._session.get_status_message())
+            self._status_label.setText(tr(self._session.get_status_message()))
             self._clear_selection()
             return
 
         board = self._session.get_board_copy()
 
         if board.turn != self._session.human_color:
-            self._status_label.setText("To nie jest tura gracza.")
+            self._status_label.setText(tr("To nie jest tura gracza."))
             self._clear_selection()
             return
 
@@ -324,7 +364,7 @@ class GameScreen(QWidget):
 
         if clicked_square == self._selected_square:
             self._clear_selection()
-            self._status_label.setText("Anulowano wybór figury.")
+            self._status_label.setText(tr("Anulowano wybór figury."))
             return
 
         clicked_piece = board.piece_at(clicked_square)
@@ -355,11 +395,11 @@ class GameScreen(QWidget):
         piece = board.piece_at(square)
 
         if piece is None:
-            self._status_label.setText("Kliknij własną figurę.")
+            self._status_label.setText(tr("Kliknij własną figurę."))
             return
 
         if piece.color != self._session.human_color:
-            self._status_label.setText("To nie jest twoja figura.")
+            self._status_label.setText(tr("To nie jest twoja figura."))
             return
 
         legal_targets = get_legal_target_squares(
@@ -368,7 +408,7 @@ class GameScreen(QWidget):
         )
 
         if not legal_targets:
-            self._status_label.setText("Ta figura nie ma legalnych ruchów.")
+            self._status_label.setText(tr("Ta figura nie ma legalnych ruchów."))
             return
 
         self._selected_square = square
@@ -376,7 +416,7 @@ class GameScreen(QWidget):
         self._board_widget.set_legal_target_squares(legal_targets)
 
         square_name = chess.square_name(square)
-        self._status_label.setText(f"Wybrano figurę na polu {square_name}.")
+        self._status_label.setText(tr(f"Wybrano figurę na polu {square_name}."))
 
     def _try_play_selected_move(
         self,
@@ -392,29 +432,22 @@ class GameScreen(QWidget):
             to_square=target_square,
         )
 
-        try:
-            result = self._session.play_human_move_uci(move_uci)
-        except (RuntimeError, ValueError) as error:
-            self._status_label.setText(str(error))
-            self._clear_selection()
-            return
-
+        candidates = [
+            m
+            for m in board.legal_moves
+            if m.from_square == self._selected_square and m.to_square == target_square
+        ]
+        if candidates and candidates[0].promotion:
+            names = ["Hetman", "Wieża", "Goniec", "Skoczek"]
+            choice, accepted = QInputDialog.getItem(
+                self, "Promocja", "Wybierz figurę", names, 0, False
+            )
+            if not accepted:
+                return
+            move_uci = move_uci[:4] + "qrbn"[names.index(choice)]
+        session = self._session
         self._clear_selection()
-        self._refresh_from_session()
-
-        if result.bot_move is not None:
-            self._status_label.setText(
-                f"Twój ruch: {result.human_move.san}. "
-                f"Bot: {result.bot_move.san}. "
-                f"{result.status_message}"
-            )
-        else:
-            self._status_label.setText(
-                f"Twój ruch: {result.human_move.san}. {result.status_message}"
-            )
-
-        if result.is_game_over:
-            self._show_finished_game_summary()
+        self._run(lambda: session.play_human_move_uci(move_uci))
 
     def _show_finished_game_summary(self) -> None:
         if self._session is None:
@@ -432,8 +465,8 @@ class GameScreen(QWidget):
         self._board_widget.set_flipped(self._session.human_color == chess.BLACK)
         self._board_widget.set_board(board)
 
-        self._status_label.setText(self._session.get_status_message())
-        self._fen_label.setText(self._session.get_fen())
+        self._status_label.setText(tr(self._session.get_status_message()))
+        self._fen_label.setText(tr(self._session.get_fen()))
 
         self._refresh_history()
 

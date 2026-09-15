@@ -47,7 +47,7 @@ class MenuScreen(QWidget):
         subtitle.setObjectName("SubtitleLabel")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        play_button = QPushButton("Graj z botem")
+        play_button = QPushButton("Gra swobodna")
         experiments_button = QPushButton("Eksperymenty")
         results_button = QPushButton("Wyniki")
         settings_button = QPushButton("Ustawienia")
@@ -74,7 +74,7 @@ class MenuScreen(QWidget):
         layout.addSpacing(22)
         alignment = Qt.AlignmentFlag.AlignCenter
         if self._on_campaign_clicked is not None:
-            campaign_button = QPushButton("Kampania badawcza")
+            campaign_button = QPushButton("Graj")
             campaign_button.setFixedWidth(280)
             campaign_button.clicked.connect(self._on_campaign_clicked)
             layout.addWidget(campaign_button, alignment=alignment)

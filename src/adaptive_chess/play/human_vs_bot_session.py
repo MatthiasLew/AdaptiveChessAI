@@ -98,6 +98,7 @@ class HumanVsBotSession:
         self._human_color = human_color
         self._bot_color = not human_color
         self._moves: list[PlayedMove] = []
+        self._resigned = False
         self._started = False
         self._on_move = on_move
 
@@ -112,8 +113,11 @@ class HumanVsBotSession:
                 if self.is_game_over():
                     raise ValueError("Saved moves continue after game over.")
                 move = chess.Move.from_uci(uci)
-                player = (PlayerType.HUMAN if self.get_turn() == self.human_color
-                          else PlayerType.BOT)
+                player = (
+                    PlayerType.HUMAN
+                    if self.get_turn() == self.human_color
+                    else PlayerType.BOT
+                )
                 self._push_move(player, move)
         finally:
             self._on_move = callback
@@ -165,7 +169,9 @@ class HumanVsBotSession:
 
         return None
 
-    def play_human_move_uci(self, move_uci: str) -> HumanMoveResult:
+    def play_human_move_uci(
+        self, move_uci: str, *, defer_bot_reply: bool = False
+    ) -> HumanMoveResult:
         """
         Wykonuje ruch człowieka zapisany w notacji UCI.
 
@@ -211,7 +217,7 @@ class HumanVsBotSession:
                 status_message=self.get_status_message(),
             )
 
-        played_bot_move = self._play_bot_move()
+        played_bot_move = None if defer_bot_reply else self._play_bot_move()
 
         return HumanMoveResult(
             human_move=played_human_move,
@@ -255,12 +261,14 @@ class HumanVsBotSession:
         """
         Sprawdza, czy partia się zakończyła.
         """
-        return self._game.is_game_over()
+        return self._resigned or self._game.is_game_over()
 
     def get_result(self) -> str | None:
         """
         Zwraca wynik partii albo None, jeśli partia trwa.
         """
+        if self._resigned:
+            return "0-1" if self.human_color else "1-0"
         return self._game.get_result()
 
     def get_status_message(self) -> str:
@@ -269,6 +277,8 @@ class HumanVsBotSession:
 
         Ten tekst może być później wyświetlany w GUI.
         """
+        if self._resigned:
+            return "Gracz poddał partię."
         board = self._game.get_board_copy()
 
         if board.is_checkmate():
@@ -291,6 +301,11 @@ class HumanVsBotSession:
             return f"{turn} to move. Check."
 
         return f"{turn} to move."
+
+    def resign(self) -> None:
+        if not self._started or self.is_game_over():
+            raise RuntimeError("No active game to resign.")
+        self._resigned = True
 
     def get_game_summary(self) -> HumanVsBotGameSummary:
         """
@@ -386,7 +401,7 @@ class HumanVsBotSession:
         self._game.make_move(move)
 
         self._bot.observe_move(
-            board_before_move=board_before_move.copy(stack=False),
+            board_before_move=board_before_move.copy(),
             move=move,
             played_by=color,
             is_own_move=color == self._bot_color,
