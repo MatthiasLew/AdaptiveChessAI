@@ -1,8 +1,8 @@
 from collections.abc import Callable
 from pathlib import Path
 
-from PySide6.QtCore import QUrl
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtCore import QEvent, QTimer, QUrl
+from PySide6.QtGui import QDesktopServices, QImageReader
 from PySide6.QtWidgets import (
     QCheckBox,
     QFileDialog,
@@ -28,6 +28,7 @@ from adaptive_chess.ui.results_loader import (
 )
 from adaptive_chess.ui.widgets.components import (
     Disclosure,
+    HelpButton,
     ResponsiveColumns,
     SectionCard,
     StatCard,
@@ -51,11 +52,17 @@ class ResultsScreen(QWidget):
 
         self._on_back_to_menu_clicked = on_back_to_menu_clicked
         self._loaded_folder: Path | None = None
+        self._image_path: Path | None = None
 
         self._folder_edit = QLineEdit("results/gui_experiments")
         self._status_label = QLabel("Wybierz folder wyników i kliknij „Wczytaj”.")
         self._files_list = QListWidget()
         self._preview = QTextBrowser()
+        self._preview.viewport().installEventFilter(self)
+        self._enlarge_chart = QPushButton("Powiększ wykres")
+        self._enlarge_chart.setObjectName("PrimaryButton")
+        self._enlarge_chart.clicked.connect(self._open_chart_preview)
+        self._enlarge_chart.hide()
         self._overview = QTextBrowser()
         self._overview.setMinimumHeight(240)
         self._technical = QCheckBox("Pokaż pliki techniczne")
@@ -73,7 +80,14 @@ class ResultsScreen(QWidget):
         root_layout.setContentsMargins(30, 30, 30, 30)
         root_layout.setSpacing(16)
 
-        root_layout.addWidget(label("Wyniki i raporty", "PageTitle"))
+        header = QHBoxLayout()
+        back_button = QPushButton("← Powrót do menu")
+        back_button.setObjectName("BackButton")
+        back_button.clicked.connect(self._on_back_to_menu_clicked)
+        header.addWidget(back_button)
+        header.addWidget(label("Wyniki i raporty", "PageTitle"), 1)
+        header.addWidget(HelpButton("reports"))
+        root_layout.addLayout(header)
         root_layout.addWidget(self._build_top_panel())
         self._stats = [
             StatCard(caption)
@@ -131,17 +145,12 @@ class ResultsScreen(QWidget):
         self._open_folder_button.setObjectName("SecondaryButton")
         self._open_folder_button.clicked.connect(self._open_loaded_folder)
 
-        back_button = QPushButton("Powrót do menu")
-        back_button.setObjectName("SecondaryButton")
-        back_button.clicked.connect(self._on_back_to_menu_clicked)
-
         folder_row.addWidget(QLabel("Folder wyników"))
         folder_row.addWidget(self._folder_edit, stretch=1)
         folder_row.addWidget(self._browse_button)
         folder_row.addWidget(self._load_button)
         actions = QHBoxLayout()
         actions.addWidget(self._open_folder_button)
-        actions.addWidget(back_button)
         actions.addStretch()
         self._load_button.setObjectName("PrimaryButton")
         help_for(self._folder_edit, "files")
@@ -200,6 +209,7 @@ class ResultsScreen(QWidget):
         self._preview.setMinimumHeight(240)
 
         layout.addWidget(title)
+        layout.addWidget(self._enlarge_chart)
         layout.addWidget(self._preview, stretch=1)
 
         panel.setLayout(layout)
@@ -280,6 +290,8 @@ class ResultsScreen(QWidget):
             self._overview.setPlainText(str(error))
 
     def _reset_dashboard(self) -> None:
+        self._image_path = None
+        self._enlarge_chart.hide()
         self._loaded_folder = None
         self._overview.clear()
         for card in self._stats:
@@ -294,13 +306,13 @@ class ResultsScreen(QWidget):
             self._load_results_folder()
 
     def _show_selected_file_preview(self) -> None:
+        self._image_path = None
+        self._enlarge_chart.hide()
         file_info = self._get_selected_file_info()
 
         if file_info is None:
             self._preview.clear()
             return
-
-        from html import escape
 
         from adaptive_chess.ui.results_presenter import file_html, overview
 
@@ -316,13 +328,44 @@ class ResultsScreen(QWidget):
             elif path.suffix == ".md":
                 self._preview.setMarkdown(path.read_text(encoding="utf-8"))
             elif path.suffix == ".png":
-                url = escape(QUrl.fromLocalFile(str(path)).toString(), quote=True)
-                width = max(200, self._preview.viewport().width() - 30)
-                self._preview.setHtml(f'<img src="{url}" width="{width}">')
+                self._image_path = path
+                self._enlarge_chart.show()
+                self._fit_image()
             else:
                 self._preview.setPlainText(read_text_preview(path))
         except (OSError, ValueError, KeyError) as error:
             self._preview.setPlainText(f"Nie udało się wczytać raportu: {error}")
+
+    def _fit_image(self) -> None:
+        from html import escape
+
+        if self._image_path is None:
+            return
+        size = QImageReader(str(self._image_path)).size()
+        if size.isEmpty():
+            return
+        viewport = self._preview.viewport()
+        scale = min(
+            max(1, viewport.width() - 24) / size.width(),
+            max(1, viewport.height() - 24) / size.height(),
+            1,
+        )
+        url = escape(QUrl.fromLocalFile(str(self._image_path)).toString(), quote=True)
+        self._preview.setHtml(
+            f'<img src="{url}" width="{int(size.width() * scale)}" '
+            f'height="{int(size.height() * scale)}">'
+        )
+
+    def _open_chart_preview(self) -> None:
+        from adaptive_chess.ui.widgets.chart_preview import ChartPreview
+
+        if self._image_path is not None:
+            ChartPreview(self._image_path, self).show()
+
+    def eventFilter(self, watched, event) -> bool:
+        if watched is self._preview.viewport() and event.type() == QEvent.Type.Resize:
+            QTimer.singleShot(0, self._fit_image)
+        return super().eventFilter(watched, event)
 
     def _open_loaded_folder(self) -> None:
         folder = self._loaded_folder

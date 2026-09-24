@@ -421,3 +421,84 @@ EN.update(
         "Końcowa pozycja do obejrzenia. Powód zakończenia podano przy wyniku.": "Final position for inspection. The reason the game ended is shown beside the result.",
     }
 )
+
+
+EN.update(
+    {
+        "? Pomoc": "? Help",
+        "← Powrót do menu": "← Back to menu",
+        "Na żywo": "Live",
+        "Poprzedni ruch": "Previous move",
+        "Następny ruch": "Next move",
+        "Półruch": "Half-move",
+        "Bilans białych": "White material balance",
+        "Partie i ruchy AI": "Games and AI moves",
+        "Rzeczywiste wyniki partii": "Actual game results",
+        "Rozpocznij porównanie, aby śledzić ruchy AI.": "Start a comparison to follow AI moves.",
+        "Ruchy: K król, Q hetman, R wieża, B goniec, N skoczek. "
+        "Duże litery na planszy = białe. Bilans materiału nie jest oceną błędu.": "Moves: K king, Q queen, R rook, B bishop, N knight. "
+        "Uppercase board pieces are white. Material balance is not a blunder assessment.",
+    }
+)
+
+EN.update(
+    {
+        "← Ruch": "← Move",
+        "Ruch →": "Move →",
+        "Ostatni ruch": "Last move",
+        "Podgląd zachowuje ostatnie 100 partii tego uruchomienia.": "The viewer retains the last 100 games from this run.",
+    }
+)
+
+EN.update(
+    {
+        "Liczba partii na jedno ustawienie kolorów. Różne boty zamieniają "
+        "kolory, więc grają 2 \u00d7 tę liczbę. Losowy z losowym: 1 \u00d7. "
+        "Pełny zestaw: 7 \u00d7. Więcej partii wydłuża porównanie i daje "
+        "więcej danych; kilka gier nie wystarcza do oceny skuteczności.": "Games per color assignment. Different bots swap colors, playing 2 times "
+        "this count. Random vs random: 1 time. Full suite: 7 times. "
+        "More games take longer and provide more data; a few games are not enough to assess effectiveness.",
+    }
+)
+
+EN.update({
+    "Powiększ wykres": "Enlarge chart",
+    "Podgląd wykresu": "Chart preview",
+    "Dopasuj do okna": "Fit to window",
+    "Zamknij": "Close",
+})
+
+EN.update({
+    "Partia zakończona. Wczytaj zapis, aby odświeżyć wynik.": "Game over. Reload the saved campaign to refresh the result.",
+})
+
+EN.update({
+    "Nie wybrano zapisu kampanii.": "No campaign save selected.",
+    "Plik kampanii: {path}": "Campaign file: {path}",
+    "Nie udało się otworzyć lub wznowić kampanii": "Could not open or resume the campaign",
+    "Wczytaj ponownie tę kampanię": "Reload this campaign",
+    "Wybierz inny zapis…": "Choose another save…",
+    "Szczegóły błędu": "Error details",
+    "Wróć do wyboru kampanii": "Back to campaign selection",
+    "Nie udało się wznowić kampanii.": "Could not resume the campaign.",
+    "Wczytano zapis. Wznów partię.": "Save loaded. Resume the game.",
+    "Wznów zapisaną partię": "Resume saved game",
+    "Ten zapis wymaga zgodnej wersji aplikacji. Zamknij program i uruchom "
+    "wersję obsługującą ten zapis. Potem kliknij "
+    "„Wczytaj ponownie tę kampanię”. "
+    "Samo ponawianie w tej wersji nie usunie błędu.":
+        "This save requires a compatible app version. Close the app and run a version "
+        "that supports this save, then click Reload this campaign. Retrying in this version will not fix the error.",
+    "Nie można teraz kontynuować kampanii. Kliknij „Wczytaj ponownie tę "
+    "kampanię”, aby spróbować z tego samego pliku, albo „Wybierz inny zapis…”.":
+        "The campaign cannot continue right now. Click Reload this campaign to retry "
+        "from the same file, or Choose another save.",
+})
+
+EN.update({
+    "Wczytywanie partii… Poczekaj na odtworzenie ruchów.": "Loading game… Please wait while saved moves are restored.",
+})
+
+EN.update({
+    "Poprzedni zapis zachowano w: {path}": "Previous save backed up to: {path}",
+})

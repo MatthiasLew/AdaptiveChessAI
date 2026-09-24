@@ -39,6 +39,7 @@ from adaptive_chess.ui.widgets.components import (
     Disclosure,
     SectionCard,
     form_layout,
+    help_field,
     label,
 )
 
@@ -212,7 +213,10 @@ class GameScreen(QWidget):
         ):
             field_label = label(caption)
             field_label.setBuddy(widget)
-            form.addRow(field_label, widget)
+            if widget is self._depth_spinbox:
+                form.addRow(field_label, help_field(widget, "depth"))
+            else:
+                form.addRow(field_label, widget)
         configuration = QWidget()
         config_layout = QVBoxLayout(configuration)
         config_layout.setContentsMargins(8, 8, 8, 8)
@@ -249,7 +253,7 @@ class GameScreen(QWidget):
         resign_button.clicked.connect(self._resign)
         actions.addWidget(resign_button)
         back_button = QPushButton("Powrót do menu")
-        back_button.setObjectName("SecondaryButton")
+        back_button.setObjectName("BackButton")
         back_button.clicked.connect(self._on_back_to_menu_clicked)
         actions.addWidget(back_button)
         layout.addLayout(actions)

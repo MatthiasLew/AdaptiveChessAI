@@ -8,6 +8,7 @@ from adaptive_chess.core.game import Game
 from adaptive_chess.evaluation.material import calculate_material_balance
 from adaptive_chess.evaluation.position import evaluate_position
 from adaptive_chess.experiments.adjudication import adjudicate_result_by_material
+from adaptive_chess.experiments.live_events import emit_event, live_enabled
 
 
 class TerminationReason(Enum):
@@ -94,6 +95,15 @@ class MatchRunner:
         """
         game = Game(self.initial_fen)
         half_moves = 0
+        live = live_enabled()
+        if live:
+            emit_event(
+                "start",
+                white=white_bot.name,
+                black=black_bot.name,
+                fen=game.get_fen(),
+                limit=self.max_half_moves,
+            )
 
         moves_uci: list[str] = []
         material_balances: list[int] = []
@@ -124,6 +134,16 @@ class MatchRunner:
                 calculate_material_balance(current_board, chess.WHITE)
             )
             position_scores.append(evaluate_position(current_board, chess.WHITE))
+            if live:
+                emit_event(
+                    "move",
+                    fen=game.get_fen(),
+                    ply=half_moves,
+                    san=board_before_move.san(move),
+                    uci=move.uci(),
+                    side="white" if played_by else "black",
+                    material=material_balances[-1],
+                )
 
         reached_move_limit = not game.is_game_over()
 
@@ -143,6 +163,12 @@ class MatchRunner:
             result = rules_result if rules_result is not None else "1/2-1/2"
 
             adjudicated_result = result
+        if live:
+            emit_event(
+                "end",
+                result="*" if reached_move_limit else result,
+                reason=termination_reason.value,
+            )
         return MatchResult(
             white_bot_name=white_bot.name,
             black_bot_name=black_bot.name,

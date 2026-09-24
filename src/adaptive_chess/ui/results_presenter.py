@@ -8,6 +8,7 @@ from pathlib import Path
 from adaptive_chess.ui.i18n import tr
 
 NAMES = {
+    "actual_results": "Rzeczywiste wyniki partii",
     "random_series": "Losowy z losowym",
     "random_vs_minimax": "Losowy ze statycznym",
     "random_vs_adaptive": "Losowy z adaptacyjnym",

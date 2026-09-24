@@ -1,0 +1,51 @@
+[Event "aivsai - Astra vs AdaptiveChessAI"]
+[Site "Local desktop GUI"]
+[Date "2026.09.23"]
+[Round "1"]
+[White "Astra (AI, GUI player)"]
+[Black "td"]
+[Result "1-0"]
+[WhiteType "program"]
+[BlackType "program"]
+[Termination "normal"]
+
+{ AI demonstration. White moves selected by Astra and entered through the visible desktop UI. Not human participant data. Bot depth 1; node budget 500; seed 42. } 1. e4 d5 2. exd5 Qxd5 3. Nc3 Qxd2+ 4. Bxd2 Nf6 5. Bc4 Nc6 6. Qf3 Bf5 7. Qxf5 e5 8. O-O-O Rd8 9. Be3 Rxd1+ 10. Nxd1 Bc5 11. Bxc5 Kd8 12. Qd3+ Kc8 13. Qh3+ Kb8 14. Qb3 Rd8 15. Ba6 Rxd1+ 16. Kxd1 b5 17. Qxb5+ Ka8 18. Qb7# 1-0
+
+[Event "aivsai - Astra vs AdaptiveChessAI"]
+[Site "Local desktop GUI"]
+[Date "2026.09.23"]
+[Round "2"]
+[White "Astra (AI, GUI player)"]
+[Black "imitation"]
+[Result "1-0"]
+[WhiteType "program"]
+[BlackType "program"]
+[Termination "normal"]
+
+{ AI demonstration. White moves selected by Astra and entered through the visible desktop UI. Not human participant data. Bot depth 1; node budget 500; seed 42. } 1. e4 d5 2. exd5 Qxd5 3. Nc3 Qxd2+ 4. Bxd2 Nf6 5. Bc4 Nc6 6. Qf3 Bf5 7. Qxf5 e5 8. O-O-O Rd8 9. Be3 Rxd1+ 10. Nxd1 Bc5 11. Bxc5 Kd8 12. Qd3+ Kc8 13. Qh3+ Kb8 14. Qb3 Rd8 15. Ba6 Rxd1+ 16. Kxd1 Nb4 17. Qxb4 c6 18. Qxb7# 1-0
+
+[Event "aivsai - Astra vs AdaptiveChessAI"]
+[Site "Local desktop GUI"]
+[Date "2026.09.23"]
+[Round "3"]
+[White "Astra (AI, GUI player)"]
+[Black "static"]
+[Result "1-0"]
+[WhiteType "program"]
+[BlackType "program"]
+[Termination "normal"]
+
+{ AI demonstration. White moves selected by Astra and entered through the visible desktop UI. Not human participant data. Bot depth 1; node budget 500; seed 42. } 1. e4 d5 2. exd5 Qxd5 3. Nc3 Qxd2+ 4. Bxd2 Nf6 5. Bc4 Nc6 6. Qf3 Bf5 7. Qxf5 e5 8. O-O-O Rd8 9. Be3 Rxd1+ 10. Nxd1 Bc5 11. Bxc5 Kd8 12. Qd3+ Kc8 13. Qh3+ Kb8 14. Qb3 Rd8 15. Ba6 Rxd1+ 16. Kxd1 b5 17. Qxb5+ Ka8 18. Qb7# 1-0
+
+[Event "aivsai - Astra vs AdaptiveChessAI"]
+[Site "Local desktop GUI"]
+[Date "2026.09.23"]
+[Round "4"]
+[White "Astra (AI, GUI player)"]
+[Black "adaptive"]
+[Result "1-0"]
+[WhiteType "program"]
+[BlackType "program"]
+[Termination "normal"]
+
+{ AI demonstration. White moves selected by Astra and entered through the visible desktop UI. Not human participant data. Bot depth 1; node budget 500; seed 42. } 1. e4 d5 2. exd5 Qxd5 3. Nc3 Qxd2+ 4. Bxd2 Nf6 5. Bc4 Nc6 6. Qf3 e5 7. O-O-O Bf5 8. Qxf5 Rd8 9. Be3 Rxd1+ 10. Nxd1 Bc5 11. Bxc5 Kd8 12. Qd3+ Kc8 13. Qh3+ Kb8 14. Qb3 Rd8 15. Ba6 Rxd1+ 16. Kxd1 h6 17. Qxb7# 1-0

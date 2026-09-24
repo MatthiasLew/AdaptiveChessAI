@@ -85,6 +85,7 @@ class SettingsScreen(QWidget):
         from adaptive_chess.ui.widgets.components import (
             SectionCard,
             form_layout,
+            help_field,
             label,
         )
 
@@ -121,7 +122,13 @@ class SettingsScreen(QWidget):
             for caption, widget in fields:
                 field_label = label(caption)
                 field_label.setBuddy(widget)
-                form.addRow(field_label, widget)
+                key = "depth" if widget is self._depth_combo else (
+                    "files" if widget is self._experiment_output_edit else ""
+                )
+                if key:
+                    form.addRow(field_label, help_field(widget, key))
+                else:
+                    form.addRow(field_label, widget)
             card.body.addLayout(form)
             if title == "Gra":
                 card.body.addWidget(self._strength_help)
@@ -134,7 +141,7 @@ class SettingsScreen(QWidget):
         for caption, action, role in (
             ("Zapisz ustawienia", self._save_settings, "PrimaryButton"),
             ("Przywróć domyślne", self._restore_defaults, "SecondaryButton"),
-            ("Powrót do menu", self._on_back_to_menu_clicked, "SecondaryButton"),
+            ("Powrót do menu", self._on_back_to_menu_clicked, "BackButton"),
         ):
             button = QPushButton(caption)
             button.setObjectName(role)

@@ -78,8 +78,10 @@ HELP = {
         "metod. Przewaga materiału nie jest wynikiem partii."
     ),
     "matches": (
-        "Liczba gier w wybranym porównaniu. Pełny zestaw uruchamia cztery "
-        "porównania, każde z taką liczbą gier."
+        "Liczba partii na jedno ustawienie kolorów. Różne boty zamieniają "
+        "kolory, więc grają 2 \u00d7 tę liczbę. Losowy z losowym: 1 \u00d7. "
+        "Pełny zestaw: 7 \u00d7. Więcej partii wydłuża porównanie i daje "
+        "więcej danych; kilka gier nie wystarcza do oceny skuteczności."
     ),
     "fen": (
         "FEN opisuje pozycję, stronę na ruchu, roszady i liczniki. Służy do "

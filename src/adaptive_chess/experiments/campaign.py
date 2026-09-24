@@ -65,6 +65,13 @@ def environment_compatible(saved: dict) -> bool:
         current["source_sha256"],
         "d755b319cfb7961cfa0cc155b520d801f011d4597528d277c296311ff973f711",
         "3ec6a4a0990fc51d9d90eb12cfa543a2259b0c679011bf0cb8e3774217dd3d5c",
+        # 2026-09-23 GUI/help/chart updates: research agents and training
+        # semantics unchanged. Preserve manifests of games played during testing.
+        "f3f6c0a3a4a6b216e624740e155928b026011105781fcaae7421ff319e4effb9",
+        "1e3e891d838ba3bedbada285cbd84df17e31718a24ad79a91541382af2bf71c1",
+        "18f8edc01a8f4af82eeb391697daa2522c95d00181f8dfb8888a17c91ebb719b",
+        # Spectator/dashboard upgrade leaves the four research agents unchanged.
+        "28d1830630b44993147ed2316fc0336da6326f480fc856212416330a079c9311",
     }
     return saved.get("source_sha256") in compatible_sources and {
         k: v for k, v in saved.items() if k != "source_sha256"

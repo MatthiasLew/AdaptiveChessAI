@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from adaptive_chess.analysis.charts import (
+    actual_result_counts,
     generate_experiment_charts,
     plot_adjudicated_results,
 )
@@ -82,7 +83,7 @@ def test_generate_experiment_charts_creates_png_files(tmp_path):
         output_dir=output_dir,
     )
 
-    assert len(chart_paths) == 3
+    assert len(chart_paths) == 4
 
     for chart_path in chart_paths:
         assert chart_path.exists()
@@ -119,3 +120,20 @@ def test_plot_adjudicated_results_rejects_missing_columns(tmp_path):
             summary_table=summary_table,
             output_path=tmp_path / "broken.png",
         )
+
+
+@pytest.mark.parametrize("limit_flag", [True, "True", "1", "yes"])
+def test_actual_chart_does_not_count_limit_as_draw_or_material_win(limit_flag):
+    rows = [
+        create_csv_row("series", "1/2-1/2", "1-0", 20, 9, True),
+        create_csv_row("series", "1/2-1/2", "1/2-1/2", 30, 0, False),
+        create_csv_row("series", "0-1", "0-1", 40, -1, False),
+    ]
+    rows[0]["reached_move_limit"] = limit_flag
+    counts = actual_result_counts(pd.DataFrame(rows)).loc["series"]
+    assert counts.to_dict() == {
+        "Wygrane białych": 0,
+        "Wygrane czarnych": 1,
+        "Remisy": 1,
+        "Przerwane limitem": 1,
+    }

@@ -64,6 +64,12 @@ QPushButton#PrimaryButton {{ background: {p["accent"]};
     color: {p["on_accent"]}; border-color: {p["accent"]}; font-weight: 600; }}
 QPushButton#PrimaryButton:hover {{ background: {p["accent_hover"]}; }}
 QPushButton#SecondaryButton {{ background: {p["surface_alt"]}; }}
+QPushButton#BackButton {{ background: {p["accent"]}; color: {p["on_accent"]};
+    border: 2px solid {p["accent_hover"]}; font-weight: 700; padding: 10px 18px; }}
+QToolButton#HelpButton {{ background: {p["surface_alt"]};
+    color: {p["text_primary"]}; border: 1px solid {p["accent_hover"]};
+    border-radius: 5px; font-weight: 600; }}
+QPlainTextEdit#LiveBoard {{ font-family: "Consolas"; font-size: 16px; }}
 QPushButton#DangerButton {{ background: {p["danger"]}; color: {p["on_accent"]}; }}
 QPushButton:focus, QToolButton:focus {{ border: 2px solid {p["accent_hover"]}; }}
 QPushButton:disabled {{ background: {p["surface_alt"]};
@@ -135,3 +141,17 @@ def apply_palette(app, theme: str) -> None:
     ):
         palette.setColor(role, QColor(colors[token]))
     app.setPalette(palette)
+
+
+def install_quick_tooltips(app) -> None:
+    from PySide6.QtWidgets import QProxyStyle, QStyle
+
+    class QuickHelpStyle(QProxyStyle):
+        def styleHint(self, hint, option=None, widget=None, returnData=None):
+            if hint == QStyle.StyleHint.SH_ToolTip_WakeUpDelay:
+                return 150
+            if hint == QStyle.StyleHint.SH_ToolTip_FallAsleepDelay:
+                return 0
+            return super().styleHint(hint, option, widget, returnData)
+
+    app.setStyle(QuickHelpStyle("Fusion"))

@@ -121,6 +121,12 @@ def test_full_suite_runs_from_gui_and_reports_readable_results(
         assert "Podsumowanie" in screen._report.toPlainText()
         assert "Przerwane limitem" in screen._report.toPlainText()
         assert "\ufffd" not in screen._log_output.toPlainText()
+        assert screen._live_view.games
+        assert all(len(game["events"]) == 3 for game in screen._live_view.games)
+        assert all(
+            game["result"] == "Przerwane limitem" for game in screen._live_view.games
+        )
+        assert "CHESS_EVENT" not in screen._log_output.toPlainText()
     finally:
         if screen._is_process_running():
             screen._process.kill()

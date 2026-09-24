@@ -102,9 +102,17 @@ def test_held_out_games_alternate_colors_without_advancing_training(tmp_path):
     assert len(campaign.data["human_evaluations"]) == 2
 
 
-def test_known_ui_upgrade_preserves_existing_campaign(tmp_path):
+@pytest.mark.parametrize(
+    "old_hash",
+    [
+        "3ec6a4a0990fc51d9d90eb12cfa543a2259b0c679011bf0cb8e3774217dd3d5c",
+        "f3f6c0a3a4a6b216e624740e155928b026011105781fcaae7421ff319e4effb9",
+        "1e3e891d838ba3bedbada285cbd84df17e31718a24ad79a91541382af2bf71c1",
+        "18f8edc01a8f4af82eeb391697daa2522c95d00181f8dfb8888a17c91ebb719b",
+    ],
+)
+def test_known_ui_upgrade_preserves_existing_campaign(tmp_path, old_hash):
     campaign = ResearchCampaign.create(tmp_path / "upgrade.sqlite3", "p")
-    old_hash = "3ec6a4a0990fc51d9d90eb12cfa543a2259b0c679011bf0cb8e3774217dd3d5c"
     campaign.data["environment"]["source_sha256"] = old_hash
     campaign.save()
     campaign.resume()

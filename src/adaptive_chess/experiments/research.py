@@ -149,13 +149,16 @@ class ResearchCampaign(Campaign):
         self.save()
 
     def resume(self) -> HumanVsBotSession:
+        # An already running session uses its loaded agent code and has its
+        # runtime manifest recorded. Disk edits must not prevent saving its mate.
+        # Check compatibility before reconstructing a session or starting a game.
+        if self.session:
+            self.session.continue_bot_turn()
+            return self.session
         if not environment_compatible(self.data["environment"]):
             raise ValueError(
                 "Zmieniono środowisko badania. Użyj pierwotnej wersji aplikacji."
             )
-        if self.session:
-            self.session.continue_bot_turn()
-            return self.session
         if self.data["active"] is None:
             if self.training_complete:
                 raise ValueError("Trening zakończony.")

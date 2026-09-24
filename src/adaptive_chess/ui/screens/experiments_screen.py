@@ -1,4 +1,5 @@
 import codecs
+import json
 import sys
 from collections.abc import Callable
 
@@ -15,11 +16,13 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QSpinBox,
+    QTabWidget,
     QTextBrowser,
     QVBoxLayout,
     QWidget,
 )
 
+from adaptive_chess.experiments.live_events import PREFIX
 from adaptive_chess.ui.experiment_config import (
     ExperimentKind,
     ExperimentRunConfig,
@@ -35,6 +38,7 @@ from adaptive_chess.ui.widgets.components import (
     form_layout,
     label,
 )
+from adaptive_chess.ui.widgets.live_match import LiveMatchView
 
 
 class ExperimentsScreen(QWidget):
@@ -52,6 +56,7 @@ class ExperimentsScreen(QWidget):
         self._process: QProcess | None = None
         self._cancelled = False
         self._decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+        self._pending_output = ""
 
         self._experiment_combo = QComboBox()
         self._matches_spinbox = QSpinBox()
@@ -86,7 +91,13 @@ class ExperimentsScreen(QWidget):
         log_panel = self._build_log_panel()
         content = ResponsiveColumns(config_panel, log_panel, breakpoint=880)
 
-        root_layout.addWidget(title)
+        header = QHBoxLayout()
+        back_button = QPushButton("← Powrót do menu")
+        back_button.setObjectName("BackButton")
+        back_button.clicked.connect(self._on_back_to_menu_clicked)
+        header.addWidget(back_button)
+        header.addWidget(title, 1)
+        root_layout.addLayout(header)
         root_layout.addWidget(
             label("Boty zagrają ze sobą automatycznie. Nie musisz wykonywać ruchów.")
         )
@@ -137,10 +148,6 @@ class ExperimentsScreen(QWidget):
         actions.addWidget(self._cancel_button)
         actions.addWidget(self._open_output_button)
         layout.addLayout(actions)
-        back_button = QPushButton("Powrót do menu")
-        back_button.setObjectName("SecondaryButton")
-        back_button.clicked.connect(self._on_back_to_menu_clicked)
-        layout.addWidget(back_button)
         layout.addStretch()
 
         panel.setLayout(layout)
@@ -165,7 +172,7 @@ class ExperimentsScreen(QWidget):
         self._progress_bar.setRange(0, 1)
         self._progress_bar.setValue(0)
         self._report = QTextBrowser()
-        self._report.setPlaceholderText(
+        self._report.setPlainText(
             "Wybierz porównanie i liczbę partii, a następnie rozpocznij. "
             "Wyniki pojawią się tutaj."
         )
@@ -177,7 +184,11 @@ class ExperimentsScreen(QWidget):
         self._status_label.setWordWrap(True)
         layout.addWidget(self._status_label)
         layout.addWidget(self._progress_bar)
-        layout.addWidget(self._report, 1)
+        self._live_view = LiveMatchView()
+        self._tabs = QTabWidget()
+        self._tabs.addTab(self._live_view, "Partie i ruchy AI")
+        self._tabs.addTab(self._report, "Podsumowanie")
+        layout.addWidget(self._tabs, 1)
         layout.addWidget(self._details)
         layout.addWidget(self._log_output, stretch=1)
 
@@ -266,6 +277,10 @@ class ExperimentsScreen(QWidget):
 
         self._cancelled = False
         self._decoder.reset()
+        self._pending_output = ""
+        self._live_view.reset()
+        self._report.setPlainText(tr("Porównanie trwa…"))
+        self._tabs.setCurrentIndex(0)
         self._log_output.clear()
         self._append_log("Start eksperymentu.")
         self._append_log(f"Python: {sys.executable}")
@@ -279,6 +294,7 @@ class ExperimentsScreen(QWidget):
         environment.insert("PYTHONUTF8", "1")
         environment.insert("PYTHONIOENCODING", "utf-8")
         environment.insert("PYTHONUNBUFFERED", "1")
+        environment.insert("ADAPTIVE_CHESS_LIVE", "1")
         process.setProcessEnvironment(environment)
         process.setProgram(sys.executable)
         from adaptive_chess.ui.experiment_config import script_arguments
@@ -316,11 +332,32 @@ class ExperimentsScreen(QWidget):
             bytes(self._process.readAllStandardOutput().data())
         )
 
-        if output:
-            self._append_log(output.rstrip())
+        self._consume_output(output)
+
+    def _consume_output(self, output: str, final: bool = False) -> None:
+        self._pending_output += output
+        lines = self._pending_output.split("\n")
+        self._pending_output = lines.pop()
+        if final and self._pending_output:
+            lines.append(self._pending_output)
+            self._pending_output = ""
+        for line in lines:
+            if line.startswith(PREFIX):
+                try:
+                    event = json.loads(line[len(PREFIX):])
+                    self._live_view.accept_event(event)
+                    if event["kind"] == "move":
+                        self._status_label.setText(
+                            tr("Porównanie trwa…") + f" {tr('Półruch')}: {event['ply']}"
+                        )
+                except (ValueError, KeyError, TypeError):
+                    self._append_log(line)
+            else:
+                self._append_log(line)
 
     def _on_process_finished(self, exit_code: int, exit_status) -> None:
         self._read_process_output()
+        self._consume_output(self._decoder.decode(b"", final=True), final=True)
         self._set_running_state(False)
         if self._cancelled:
             self._status_label.setText(tr("Porównanie zatrzymane."))

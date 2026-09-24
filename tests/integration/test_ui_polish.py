@@ -110,22 +110,27 @@ def test_exported_position_last_move_is_display_only(app):
     assert widget._last_move is None
 
 
-def test_parameter_help_opens_from_keyboard_and_retranslates(app, monkeypatch):
-    from PySide6.QtWidgets import QToolTip
+def test_parameter_help_opens_from_keyboard_and_retranslates(app):
+    from PySide6.QtWidgets import QMessageBox
 
     from adaptive_chess.ui.widgets.components import HelpButton
 
-    shown = []
-    monkeypatch.setattr(QToolTip, "showText", lambda *args: shown.append(args[1]))
     button = HelpButton("depth")
     button.show()
     button.setFocus()
     QTest.keyClick(button, Qt.Key.Key_Space)
-    assert "półruchów" in shown[-1]
+    dialog = button.findChild(QMessageBox)
+    assert dialog.isVisible()
+    original = dialog.text()
+    assert "półruchów" in original
+    dialog.close()
+    app.sendPostedEvents(None, 0)
     set_language("en")
     localize(button)
     QTest.keyClick(button, Qt.Key.Key_Space)
-    assert shown[-1] != shown[0]
+    dialogs = [d for d in button.findChildren(QMessageBox) if d.isVisible()]
+    assert dialogs[-1].text() != original
+    dialogs[-1].close()
     assert button.accessibleName() == "Parameter help"
     button.close()
 

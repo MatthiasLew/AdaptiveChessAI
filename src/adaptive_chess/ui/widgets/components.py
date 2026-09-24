@@ -7,13 +7,14 @@ from PySide6.QtWidgets import (
     QBoxLayout,
     QFormLayout,
     QFrame,
+    QHBoxLayout,
     QLabel,
     QLayout,
+    QMessageBox,
     QPushButton,
     QSizePolicy,
     QStackedWidget,
     QToolButton,
-    QToolTip,
     QVBoxLayout,
     QWidget,
 )
@@ -28,15 +29,31 @@ class HelpButton(QToolButton):
         super().__init__()
         from adaptive_chess.ui.help_text import help_for
 
-        self.setText("?")
+        self.setText(tr("? Pomoc"))
+        self.setObjectName("HelpButton")
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setAccessibleName(tr("Pomoc dotycząca parametru"))
         help_for(self, key)
         self.clicked.connect(self._show_help)
 
     def _show_help(self) -> None:
-        QToolTip.showText(
-            self.mapToGlobal(self.rect().bottomLeft()), self.toolTip(), self
-        )
+        dialog = QMessageBox(self)
+        dialog.setWindowTitle(tr("Pomoc dotycząca parametru"))
+        dialog.setText(self.toolTip())
+        dialog.setStandardButtons(QMessageBox.StandardButton.Ok)
+        dialog.setModal(False)
+        dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        dialog.show()
+
+
+def help_field(widget: QWidget, key: str) -> QHBoxLayout:
+    from adaptive_chess.ui.help_text import help_for
+
+    help_for(widget, key)
+    row = QHBoxLayout()
+    row.addWidget(widget, 1)
+    row.addWidget(HelpButton(key))
+    return row
 
 
 def label(text: str, role: str = "HelperText") -> QLabel:

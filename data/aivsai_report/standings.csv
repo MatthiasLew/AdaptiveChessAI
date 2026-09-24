@@ -1,0 +1,5 @@
+agent,games,wins,draws,losses,unfinished,points
+imitation,18,1,17,0,0,9.5
+td,18,0,18,0,0,9.0
+static,18,0,18,0,0,9.0
+adaptive,18,0,17,1,0,8.5

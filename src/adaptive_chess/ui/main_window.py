@@ -1,3 +1,4 @@
+from PySide6.QtCore import QProcess
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
@@ -64,6 +65,16 @@ class MainWindow(QMainWindow):
         self.showMaximized() if self.isFullScreen() else self.showFullScreen()
 
     def leave_fullscreen(self) -> None:
+        if self._campaign_screen._dashboard.busy:
+            self._campaign_screen._dashboard.cancel()
+            return
+        if (
+            self._campaign_screen._process is not None
+            and self._campaign_screen._process.state()
+            != QProcess.ProcessState.NotRunning
+        ):
+            self._campaign_screen.stop_tournament()
+            return
         if self.isFullScreen():
             self.showMaximized()
 
@@ -182,10 +193,13 @@ class MainWindow(QMainWindow):
         self._campaign_screen = CampaignScreen(
             on_back=lambda: self.show_screen(ScreenName.MENU)
         )
+        # One window-wide Escape binding avoids Qt's ambiguous-shortcut handling.
+        self._campaign_screen._dashboard.escape.setEnabled(False)
         self._add_screen(ScreenName.CAMPAIGN, self._campaign_screen)
         self._apply_settings(self._settings_store.load())
 
     def closeEvent(self, event) -> None:
+        self._campaign_screen._dashboard.cancel()
         if self._campaign_screen.thinking or (
             self._game_screen is not None and self._game_screen.thinking
         ):

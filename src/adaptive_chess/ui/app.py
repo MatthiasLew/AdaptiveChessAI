@@ -3,7 +3,7 @@ import sys
 from PySide6.QtWidgets import QApplication
 
 from adaptive_chess.ui.main_window import MainWindow
-from adaptive_chess.ui.theme import DARK_THEME_STYLESHEET
+from adaptive_chess.ui.theme import DARK_THEME_STYLESHEET, install_quick_tooltips
 
 
 def run_gui() -> int:
@@ -15,6 +15,7 @@ def run_gui() -> int:
     """
     app = QApplication(sys.argv)
     app.setApplicationName("AdaptiveChessAI")
+    install_quick_tooltips(app)
     app.setStyleSheet(DARK_THEME_STYLESHEET)
 
     window = MainWindow()

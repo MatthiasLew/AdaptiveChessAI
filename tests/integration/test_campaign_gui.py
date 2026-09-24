@@ -73,6 +73,8 @@ def test_four_method_gui_evaluation_process(tmp_path):
         wait_worker(screen, app)
         assert len(screen.campaign.data["evaluations"]["results"]) == 16
         assert len(screen.campaign.data["tournament"]["results"]) == 12
+        assert screen._dashboard.benchmark_live.game_count == 28
+        assert "Turniej badawczy" in screen._dashboard.benchmark.toPlainText()
         assert (tmp_path / "research_report" / "games.pgn").is_file()
     finally:
         screen.stop_tournament()

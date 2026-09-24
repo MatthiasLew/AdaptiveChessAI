@@ -174,7 +174,7 @@ class GameSummaryScreen(QWidget):
         for caption, callback, role in (
             ("Zapisz partię", self._save_summary, "SecondaryButton"),
             ("Graj ponownie", self._on_play_again_clicked, "PrimaryButton"),
-            ("Powrót do menu", self._on_back_to_menu_clicked, "SecondaryButton"),
+            ("Powrót do menu", self._on_back_to_menu_clicked, "BackButton"),
         ):
             button = QPushButton(caption)
             button.setObjectName(role)

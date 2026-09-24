@@ -1,5 +1,6 @@
 """Guided training and frozen evaluation with durable, resumable progress."""
 
+import json
 import sqlite3
 import sys
 from collections.abc import Callable
@@ -28,12 +29,14 @@ from PySide6.QtWidgets import (
 
 from adaptive_chess.experiments.campaign import Campaign
 from adaptive_chess.experiments.campaign_tournament import export_campaign, standings
+from adaptive_chess.experiments.live_events import PREFIX
 from adaptive_chess.experiments.research import ResearchCampaign, load_campaign
 from adaptive_chess.learning.agents import KINDS
 from adaptive_chess.ui.experiment_config import get_project_root, writable_root
 from adaptive_chess.ui.help_text import HELP, help_for, method_help
 from adaptive_chess.ui.i18n import tr
 from adaptive_chess.ui.move_builder import get_legal_target_squares
+from adaptive_chess.ui.widgets.campaign_dashboard import CampaignDashboard
 from adaptive_chess.ui.widgets.chess_board_widget import ChessBoardWidget
 from adaptive_chess.ui.widgets.components import (
     BoardArea,
@@ -42,6 +45,7 @@ from adaptive_chess.ui.widgets.components import (
     ResponsiveColumns,
     SectionCard,
     form_layout,
+    help_field,
     label,
 )
 
@@ -75,6 +79,7 @@ class CampaignScreen(QWidget):
     def __init__(self, on_back: Callable[[], None]) -> None:
         super().__init__()
         self.campaign: Campaign | None = None
+        self._campaign_path: Path | None = None
         self._worker: CampaignWorker | None = None
         self._process: QProcess | None = None
         self._error = ""
@@ -121,12 +126,64 @@ class CampaignScreen(QWidget):
 
         root = QVBoxLayout(self)
         root.setContentsMargins(16, 16, 16, 16)
+        navigation_bar = QWidget()
+        navigation = QHBoxLayout(navigation_bar)
+        navigation.setContentsMargins(0, 0, 0, 0)
+        menu = QPushButton("← Powrót do menu")
+        menu.setObjectName("BackButton")
+        menu.clicked.connect(on_back)
+        load = QPushButton("Wczytaj kampanię…")
+        load.setObjectName("PrimaryButton")
+        load.clicked.connect(self._open)
+        navigation.addWidget(menu)
+        navigation.addWidget(load)
+        navigation.addStretch()
+        self._controls.extend([menu, load])
+        root.addWidget(navigation_bar)
+        self._current_file = label("Nie wybrano zapisu kampanii.")
+        self._current_file.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        root.addWidget(self._current_file)
+        self._backup_notice = label("")
+        self._backup_notice.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self._backup_notice.hide()
+        root.addWidget(self._backup_notice)
         self._pages = PageStack()
         self._pages.currentChanged.connect(self.updateGeometry)
         root.addWidget(self._pages)
         self._entry, self._setup, self._play = QWidget(), QWidget(), QWidget()
+        self._pages.currentChanged.connect(
+            lambda: navigation_bar.setVisible(
+                self._pages.currentWidget() is not self._entry
+            )
+        )
         for page in (self._entry, self._setup, self._play):
             self._pages.addWidget(page)
+        self._recovery = QWidget()
+        self._pages.addWidget(self._recovery)
+        recovery_layout = QVBoxLayout(self._recovery)
+        recovery_layout.addWidget(
+            label("Nie udało się otworzyć lub wznowić kampanii", "PageTitle")
+        )
+        self._recovery_message = label("", "StatusBadge")
+        recovery_layout.addWidget(self._recovery_message)
+        self._retry_load = QPushButton("Wczytaj ponownie tę kampanię")
+        self._retry_load.setObjectName("PrimaryButton")
+        self._retry_load.clicked.connect(self._reload_campaign)
+        recovery_layout.addWidget(self._retry_load)
+        choose = QPushButton("Wybierz inny zapis…")
+        choose.clicked.connect(self._open)
+        recovery_layout.addWidget(choose)
+        self._controls.extend([self._retry_load, choose])
+        self._recovery_details = label("")
+        self._recovery_disclosure = Disclosure(
+            "Szczegóły błędu", self._recovery_details
+        )
+        recovery_layout.addWidget(self._recovery_disclosure)
+        recovery_layout.addStretch()
 
         def button(text, action, layout):
             control = QPushButton(text)
@@ -150,7 +207,7 @@ class CampaignScreen(QWidget):
         button("Wczytaj kampanię…", self._open, entry)
         self._continue = button("Wróć do bieżącej kampanii", self._refresh, entry)
         self._continue.hide()
-        button("Powrót do menu", on_back, entry)
+        button("Powrót do menu", on_back, entry).setObjectName("BackButton")
         self._entry_message = QLabel()
         self._entry_message.setWordWrap(True)
         entry.addWidget(self._entry_message)
@@ -173,7 +230,10 @@ class CampaignScreen(QWidget):
         ):
             field_label = label(caption)
             field_label.setBuddy(widget)
-            form.addRow(field_label, widget)
+            if widget is self._games:
+                form.addRow(field_label, help_field(widget, "games"))
+            else:
+                form.addRow(field_label, widget)
             self._controls.append(widget)
         advanced = SectionCard()
         advanced_form = form_layout()
@@ -188,7 +248,7 @@ class CampaignScreen(QWidget):
             field_label.setBuddy(widget)
             help_for(field_label, key)
             help_for(widget, key)
-            advanced_form.addRow(field_label, widget)
+            advanced_form.addRow(field_label, help_field(widget, key))
             self._controls.append(widget)
         basic.body.addWidget(Disclosure("Parametry zaawansowane", advanced))
         self._configuration_summary = label("", "StatusBadge")
@@ -239,6 +299,7 @@ class CampaignScreen(QWidget):
         self._resign_button = button("Poddaj partię", self._resign, side)
         self._resign_button.setObjectName("DangerButton")
         tabs = QTabWidget()
+        self._assessment_tabs = tabs
         side.addWidget(tabs, 1)
         tabs.addTab(self._log, "Ruchy")
         assessment = QWidget()
@@ -255,7 +316,15 @@ class CampaignScreen(QWidget):
             ("Agent kontrolny", self._eval_agent),
             ("Checkpoint", self._eval_checkpoint),
         ):
-            evaluation_form.addRow(caption, widget)
+            key = (
+                "limit"
+                if widget is self._limit
+                else ("checkpoint" if widget is self._eval_checkpoint else "")
+            )
+            if key:
+                evaluation_form.addRow(caption, help_field(widget, key))
+            else:
+                evaluation_form.addRow(caption, widget)
             self._controls.append(widget)
         help_for(self._limit, "limit")
         help_for(self._eval_checkpoint, "checkpoint")
@@ -277,7 +346,35 @@ class CampaignScreen(QWidget):
         self._pause.setEnabled(False)
         assessment_layout.addWidget(self._pause)
         assessment_layout.addStretch()
-        button("Zapisano automatycznie • Wróć", self.show_entry, side)
+        button("Wróć do wyboru kampanii", self.show_entry, side)
+        self._dashboard = CampaignDashboard()
+        self._dashboard.busy_changed.connect(self._set_busy)
+        self._pages.addWidget(self._dashboard)
+        self._summary_button = button(
+            "Podsumowanie i drabinka AI", self._show_dashboard, side
+        )
+        self._summary_button.hide()
+        actions = QHBoxLayout()
+        self._dashboard.layout().addLayout(actions)
+        button("Uruchom benchmark", self._tournament, actions)
+        button("Eksportuj raport", self._export, actions)
+        button("Partia kontrolna / ustawienia oceny", self._show_assessment, actions)
+        self._benchmark_stop = QPushButton("Zatrzymaj benchmark")
+        self._benchmark_stop.clicked.connect(self.stop_tournament)
+        self._benchmark_stop.setEnabled(False)
+        actions.addWidget(self._benchmark_stop)
+        self._dashboard.escape.activated.connect(self.stop_tournament)
+        self._pending_output = ""
+
+    def _show_assessment(self) -> None:
+        if not self.busy:
+            self._pages.setCurrentWidget(self._play)
+            self._assessment_tabs.setCurrentIndex(1)
+
+    def _show_dashboard(self) -> None:
+        if isinstance(self.campaign, ResearchCampaign) and not self.busy:
+            self._dashboard.load(self.campaign)
+            self._pages.setCurrentWidget(self._dashboard)
 
     def refresh_translation(self) -> None:
         self._configuration_summary.setText(
@@ -307,6 +404,7 @@ class CampaignScreen(QWidget):
     def busy(self) -> bool:
         return (
             self._reply_timer.isActive()
+            or self._dashboard.busy
             or self._worker is not None
             or (
                 self._process is not None
@@ -316,7 +414,11 @@ class CampaignScreen(QWidget):
 
     @property
     def thinking(self) -> bool:
-        return self._worker is not None or self._reply_timer.isActive()
+        return (
+            self._worker is not None
+            or self._reply_timer.isActive()
+            or self._dashboard.busy
+        )
 
     def _set_busy(self, busy: bool) -> None:
         for control in self._controls:
@@ -324,52 +426,115 @@ class CampaignScreen(QWidget):
         self._board.setEnabled(not busy)
 
     def _create(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(
+        if self.busy:
+            return
+        dialog = QFileDialog(
             self,
             "Nowa kampania",
-            str(writable_root() / "data" / "campaigns"),
+            str(writable_root() / "data"),
             "Kampania (*.sqlite3)",
         )
-        if not path:
+        dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+        dialog.setDefaultSuffix("sqlite3")
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return
-        if not path.endswith(".sqlite3"):
-            path += ".sqlite3"
+        path = dialog.selectedFiles()[0]
+        from adaptive_chess.ui.campaign_files import create_campaign_file
+
         try:
-            self.campaign = ResearchCampaign.create(
+            campaign, backup = create_campaign_file(
                 path,
-                self._participant.text(),
-                self._games.value(),
-                self._depth.value(),
-                self._nodes.value(),
-                self._seed.value(),
-                [value.split() for value in self._openings.text().split(";")],
+                overwrite=True,  # Native save dialog confirmed replacement.
+                participant=self._participant.text(),
+                games=self._games.value(),
+                depth=self._depth.value(),
+                nodes=self._nodes.value(),
+                seed=self._seed.value(),
+                openings=[value.split() for value in self._openings.text().split(";")],
             )
+            self.campaign = campaign
+            self._backup_notice.setVisible(backup is not None)
+            self._backup_notice.setText(
+                tr("Poprzedni zapis zachowano w: {path}").format(path=backup)
+                if backup
+                else ""
+            )
+            self._campaign_path = self.campaign.path
             self._refresh()
             self._resume()
         except (OSError, ValueError, sqlite3.Error) as error:
             self._setup_message.setText(tr(str(error)))
 
     def _open(self) -> None:
+        if self.busy:
+            return
+        initial = (
+            self._campaign_path.parent
+            if self._campaign_path
+            else writable_root() / "data"
+        )
         path, _ = QFileDialog.getOpenFileName(
             self,
             "Wczytaj kampanię",
-            str(writable_root() / "data" / "campaigns"),
+            str(initial),
             "Kampania (*.sqlite3)",
         )
         if path:
-            self.load_campaign(path)
-            if self.campaign and (
-                self.campaign.data["active"] or not self.campaign.data["completed"]
-            ):
-                self._resume()
+            self._load_and_resume(path)
+
+    def _load_and_resume(self, path: str | Path) -> None:
+        self.load_campaign(path)
+        if self.campaign and (
+            self.campaign.data["active"] or not self.campaign.data["completed"]
+        ):
+            self._resume()
+
+    def _reload_campaign(self) -> None:
+        if not self.busy and self._campaign_path is not None:
+            self._load_and_resume(self._campaign_path)
+
+    def _show_recovery(self, message: str) -> None:
+        self._waiting_for_reply = False
+        self._reply_timer.stop()
+        self.campaign = None
+        self._continue.hide()
+        self._board.setEnabled(False)
+        self._resume_button.hide()
+        self._resign_button.hide()
+        self._retry_load.setEnabled(self._campaign_path is not None)
+        text = (
+            "Ten zapis wymaga zgodnej wersji aplikacji. Zamknij program i uruchom "
+            "wersję obsługującą ten zapis. Potem kliknij "
+            "„Wczytaj ponownie tę kampanię”. "
+            "Samo ponawianie w tej wersji nie usunie błędu."
+            if "Zmieniono środowisko" in message
+            else "Nie można teraz kontynuować kampanii. Kliknij „Wczytaj ponownie tę "
+            "kampanię”, aby spróbować z tego samego pliku, albo „Wybierz inny zapis…”."
+        )
+        self._recovery_message.setText(tr(text))
+        self._recovery_details.setText(message)
+        self._recovery_disclosure.toggle.setChecked(False)
+        self._status.setText(tr("Nie udało się wznowić kampanii.") + " " + message)
+        self._pages.setCurrentWidget(self._recovery)
+
+    def _show_file_path(self) -> None:
+        if self._campaign_path is not None:
+            self._current_file.setText(
+                tr("Plik kampanii: {path}").format(path=self._campaign_path)
+            )
 
     def load_campaign(self, path: str | Path) -> None:
+        if self.busy:
+            return
+        self._backup_notice.clear()
+        self._backup_notice.hide()
+        self._campaign_path = Path(path).resolve()
+        self._show_file_path()
         try:
             self.campaign = load_campaign(path)
             self._refresh()
         except (OSError, ValueError, KeyError, sqlite3.Error) as error:
-            self.campaign = None
-            self._entry_message.setText(tr(f"Nie udało się wczytać kampanii: {error}"))
+            self._show_recovery(str(error))
 
     def _run(self, action: Callable[[], object]) -> None:
         if self.busy:
@@ -377,7 +542,16 @@ class CampaignScreen(QWidget):
         self._error = ""
         self._set_busy(True)
         self._status.setText(tr("Bot myśli… Ruchy są zapisywane automatycznie."))
-        self._worker = CampaignWorker(action, self)
+        campaign = self.campaign
+
+        def action_and_finish() -> None:
+            action()
+            if campaign and campaign.session and campaign.session.is_game_over():
+                campaign.finish()
+
+        # Finishing includes model updates and SQLite writes. Keep it in the
+        # worker so every failure reaches _failed, including ValueError.
+        self._worker = CampaignWorker(action_and_finish, self)
         self._worker.failed.connect(self._failed)
         self._worker.finished.connect(self._done)
         self._worker.start()
@@ -392,22 +566,11 @@ class CampaignScreen(QWidget):
         self._set_busy(False)
         if self._error:
             self._waiting_for_reply = False
-            self._status.setText(
-                tr(f"Błąd: {self._error}. Wczytaj zapis przed kontynuacją.")
-            )
-            self.campaign = None
+            # A move may already be saved (including mate). Show that position
+            # before requiring a reload, rather than leaving an obsolete board.
+            self._refresh()
+            self._show_recovery(self._error)
             return
-        if (
-            self.campaign
-            and self.campaign.session
-            and self.campaign.session.is_game_over()
-        ):
-            try:
-                self.campaign.finish()
-            except (OSError, RuntimeError, sqlite3.Error) as error:
-                self._status.setText(tr(str(error)))
-                self.campaign = None
-                return
         self._refresh()
         if self._waiting_for_reply:
             self._waiting_for_reply = False
@@ -422,6 +585,10 @@ class CampaignScreen(QWidget):
                 self._status.setText(tr("Trening zakończony. Uruchom turniej."))
                 return
             self._run(self.campaign.resume)
+            if self._worker is not None:
+                self._status.setText(
+                    tr("Wczytywanie partii… Poczekaj na odtworzenie ruchów.")
+                )
 
     def _human_evaluation(self) -> None:
         campaign = self.campaign
@@ -455,6 +622,14 @@ class CampaignScreen(QWidget):
         if self.busy or not self.campaign or not self.campaign.session:
             return
         session = self.campaign.session
+        if session.is_game_over():
+            self._status.setText(
+                tr("Partia zakończona. Wczytaj zapis, aby odświeżyć wynik.")
+            )
+            return
+        if session.get_turn() != session.human_color:
+            self._status.setText(tr("Ruch bota."))
+            return
         board = session.get_board_copy()
         piece = board.piece_at(square)
         if piece and piece.color == session.human_color:
@@ -502,6 +677,8 @@ class CampaignScreen(QWidget):
         if not self.campaign:
             return
         campaign = self.campaign
+        self._campaign_path = campaign.path
+        self._show_file_path()
         self._pages.setCurrentWidget(self._play)
         self._result_heading.clear()
         self._result_heading.hide()
@@ -564,7 +741,7 @@ class CampaignScreen(QWidget):
                 if records
                 else None
             )
-            if record:
+            if record and not campaign.data.get("active"):
                 board = chess.Board(campaign.data["initial_fen"])
                 for uci in record["moves"]:
                     board.push_uci(uci)
@@ -594,9 +771,23 @@ class CampaignScreen(QWidget):
                 self._log.setPlainText("\n".join(record["moves"]))
                 self._resume_button.setText(tr("Rozpocznij następną partię"))
             else:
-                self._board.set_board(chess.Board())
-                self._status.setText(tr("Kampania gotowa. Rozpocznij pierwszą partię."))
-                self._resume_button.setText(tr("Rozpocznij pierwszą partię"))
+                active = campaign.data.get("active")
+                board = chess.Board(campaign.data["initial_fen"])
+                for uci in active["moves"] if active else []:
+                    board.push_uci(uci)
+                if active:
+                    self._board.set_flipped(not active["human_white"])
+                self._board.set_board(board)
+                self._status.setText(
+                    tr("Wczytano zapis. Wznów partię.")
+                    if active
+                    else tr("Kampania gotowa. Rozpocznij pierwszą partię.")
+                )
+                self._resume_button.setText(
+                    tr("Wznów zapisaną partię")
+                    if active
+                    else tr("Rozpocznij pierwszą partię")
+                )
             self._resume_button.setEnabled(not campaign.training_complete)
             if campaign.training_complete:
                 self._status.setText(
@@ -627,9 +818,21 @@ class CampaignScreen(QWidget):
                     f"przerwane {row['unfinished']}"
                 )
             self._log.setPlainText("\n".join(lines))
+        completed = (
+            isinstance(campaign, ResearchCampaign)
+            and campaign.training_complete
+            and not campaign.data.get("active")
+        )
+        self._summary_button.setVisible(completed)
+        if completed:
+            self._resume_button.hide()
+            self._show_dashboard()
 
     def _tournament(self) -> None:
         if self.busy or not self.campaign:
+            return
+        if self.campaign.data.get("active"):
+            self._status.setText(tr("Najpierw zakończ lub wznów aktywną partię."))
             return
         if not self.campaign.training_complete and not isinstance(
             self.campaign, ResearchCampaign
@@ -639,6 +842,7 @@ class CampaignScreen(QWidget):
         process = QProcess(self)
         environment = QProcessEnvironment.systemEnvironment()
         environment.insert("PYTHONUTF8", "1")
+        environment.insert("ADAPTIVE_CHESS_LIVE", "1")
         environment.insert("PYTHONPATH", str(get_project_root() / "src"))
         process.setProcessEnvironment(environment)
         process.setProgram(sys.executable)
@@ -658,25 +862,60 @@ class CampaignScreen(QWidget):
         process.finished.connect(self._tournament_done)
         process.errorOccurred.connect(self._process_error)
         self._process = process
+        self._pending_output = ""
+        if isinstance(self.campaign, ResearchCampaign):
+            self._dashboard.load(self.campaign)
+            self._dashboard.benchmark_live.reset()
+            self._dashboard.tabs.setCurrentWidget(self._dashboard.benchmark_live)
+            self._pages.setCurrentWidget(self._dashboard)
         self._set_busy(True)
+        self._dashboard.arena.setEnabled(False)
+        self._dashboard.play.setEnabled(False)
+        self._dashboard.shuffle.setEnabled(False)
         self._pause.setEnabled(True)
+        self._benchmark_stop.setEnabled(True)
         self._status.setText(tr("Turniej zamrożonych agentów. Zapis po każdej partii."))
         process.start()
 
     def _read_output(self) -> None:
         if self._process:
             output = bytes(self._process.readAllStandardOutput().data())
-            self._log.appendPlainText(output.decode("utf-8", errors="replace"))
+            self._pending_output += output.decode("utf-8", errors="replace")
+            lines = self._pending_output.split("\n")
+            self._pending_output = lines.pop()
+            if self._process.state() == QProcess.ProcessState.NotRunning:
+                lines.append(self._pending_output)
+                self._pending_output = ""
+            for line in lines:
+                if line.startswith(PREFIX):
+                    try:
+                        self._dashboard.benchmark_live.accept_event(
+                            json.loads(line[len(PREFIX) :])
+                        )
+                    except (ValueError, KeyError, TypeError):
+                        self._log.appendPlainText(line)
+                elif line.strip():
+                    self._log.appendPlainText(line)
+                    self._dashboard.status_message.setText(line)
 
     def _process_error(self, error) -> None:
         self._status.setText(tr(f"Błąd procesu turnieju: {error}"))
         self._set_busy(False)
         self._pause.setEnabled(False)
+        self._benchmark_stop.setEnabled(False)
+        self._dashboard.status_message.setText(tr(f"Błąd procesu benchmarku: {error}"))
+        self._dashboard.shuffle.setEnabled(True)
+        self._dashboard.arena.setEnabled(True)
+        self._dashboard._bracket()
 
     def _tournament_done(self, code: int, status) -> None:
         self._read_output()
         self._set_busy(False)
         self._pause.setEnabled(False)
+        self._benchmark_stop.setEnabled(False)
+        self._dashboard.shuffle.setEnabled(True)
+        self._dashboard.arena.setEnabled(True)
+        self._dashboard._bracket()
         if self.campaign:
             self.load_campaign(self.campaign.path)
         self._status.setText(
@@ -686,6 +925,7 @@ class CampaignScreen(QWidget):
                 else "Turniej zatrzymany lub błąd. Możesz wznowić zapisane partie."
             )
         )
+        self._dashboard.status_message.setText(self._status.text())
         if self._process:
             self._process.deleteLater()
             self._process = None
